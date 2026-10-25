@@ -6,7 +6,7 @@
 - 네이버 데이터랩(검색어 트렌드): 6개월 주간 관심도 추이, 상승률 (기준 키워드로 품목 간 비교 가능하게 보정)
 - NAVER API HUB (네이버 클라우드) : 검색어트렌드, 뉴스 검색, 쇼핑인사이트(분야별 클릭 추이)
   → NAVER_HUB_CLIENT_ID / NAVER_HUB_CLIENT_SECRET 이 있으면 검색어트렌드는 API HUB로 호출합니다.
-  → API HUB에는 쇼핑(상품) 검색이 없어서 가격 데이터는 네이버 개발자센터 키(NAVER_CLIENT_ID/SECRET)로만 수집됩니다.
+  → 네이버 쇼핑 검색 API는 2026-07-31 종료(API HUB 미이관). 상품 순위·가격은 쿠팡 파트너스 API로 수집합니다.
 - 네이버 검색광고 API (선택)  : 월간 검색량(PC+모바일), 광고 경쟁정도
 - 쿠팡 파트너스 API (선택)    : 쿠팡 상위 상품 가격, 로켓배송 비율 (호출 제한 때문에 실행마다 일부 품목씩 순환)
 
@@ -39,7 +39,9 @@ HISTORY = DATA_DIR / "history.json"
 KST = dt.timezone(dt.timedelta(hours=9))
 
 INTERVAL_HOURS = float(os.getenv("INTERVAL_HOURS", "70"))  # 3일 주기 (매일 체크, 70시간 지나면 수집)
-COUPANG_MAX = int(os.getenv("COUPANG_MAX_PER_RUN", "10"))  # 쿠팡 검색 API는 시간당 호출 제한이 엄격함
+COUPANG_MAX = int(os.getenv("COUPANG_MAX_PER_RUN", "10"))  # 쿠팡 검색 API는 시간당 호출 제한이 엄격함 → 1시간에 10개씩
+COUPANG_ROUNDS = int(os.getenv("COUPANG_ROUNDS", "4"))      # 한 번 실행에서 최대 4회(=40개) 순환, 회차 사이 1시간 대기
+COUPANG_WAIT = int(os.getenv("COUPANG_WAIT_SEC", "3600"))
 HISTORY_KEEP = 120
 NEWS_PER_ITEM = int(os.getenv("NEWS_PER_ITEM", "5"))
 
@@ -187,6 +189,8 @@ def naver_shop(item, headers):
         "sellers": len({p["mall"] for p in prods if p["mall"]}),
         "categories": [{"path": c, "share": round(n / len(prods) * 100)} for c, n in cat_top],
         "top": [{k: p[k] for k in ("title", "price", "mall", "link", "image")} for p in prods[:10]],
+        **{k: v for k, v in (analyze_products([dict(p) for p in prods[:10]]) or {}).items()
+           if k in ("min_item", "real_min", "real_min_item", "top")},
     }
 
 
@@ -412,7 +416,37 @@ def searchad(keywords, key, secret, customer):
 
 
 # ---------------------------------------------------------------- 쿠팡 파트너스
+def analyze_products(prods):
+    """
+    랭킹순 상위 상품 목록 → 가격 분석
+    - 중앙값의 35% 미만 가격은 부속품·소량 구성 의심으로 표시하고 실질 최저가·평균에서 제외
+    - 각 상품에 평균 대비 가격 차이(%)와 순위를 붙임
+    """
+    prods = [p for p in prods if p.get("price", 0) > 0]
+    if not prods:
+        return None
+    prices = sorted(p["price"] for p in prods)
+    med = statistics.median(prices)
+    for i, p in enumerate(prods, 1):
+        p["rank"] = i
+        p["suspect"] = p["price"] < med * 0.35
+    core = [p for p in prods if not p["suspect"]] or prods
+    avg_core = mean([p["price"] for p in core])
+    for p in prods:
+        p["vs_avg"] = round((p["price"] / avg_core - 1) * 100, 1) if avg_core else None
+    lo = min(prods, key=lambda p: p["price"])
+    real_lo = min(core, key=lambda p: p["price"])
+    pick = lambda p: {k: p.get(k) for k in ("rank", "title", "price", "link", "mall", "rocket")}
+    return {
+        "n": len(prods), "min": lo["price"], "min_item": pick(lo),
+        "real_min": real_lo["price"], "real_min_item": pick(real_lo),
+        "avg": round(avg_core), "avg_all": round(mean(prices)), "median": round(med), "max": prices[-1],
+        "top": prods[:10],
+    }
+
+
 def coupang(keyword, ak, sk):
+    """쿠팡 파트너스 상품 검색: 쿠팡 랭킹순 상위 10개 (판매실적·리뷰 등이 반영된 순서)"""
     path = "/v2/providers/affiliate_open_api/apis/openapi/products/search"
     query = urllib.parse.urlencode({"keyword": keyword, "limit": 10})
     signed = time.strftime("%y%m%dT%H%M%SZ", time.gmtime())
@@ -420,20 +454,16 @@ def coupang(keyword, ak, sk):
     auth = f"CEA algorithm=HmacSHA256, access-key={ak}, signed-date={signed}, signature={sig}"
     r = request(f"https://api-gateway.coupang.com{path}?{query}", {"Authorization": auth})
     data = r.get("data") or {}
-    prods = data.get("productData", []) if isinstance(data, dict) else []
-    prices = [int(p.get("productPrice") or 0) for p in prods]
-    stats = price_stats(prices)
-    if not stats:
+    raw = data.get("productData", []) if isinstance(data, dict) else []
+    prods = [{"title": p.get("productName", ""), "price": int(p.get("productPrice") or 0),
+              "rocket": bool(p.get("isRocket")), "free_ship": bool(p.get("isFreeShipping")),
+              "link": p.get("productUrl", ""), "image": p.get("productImage", ""), "mall": "쿠팡"} for p in raw]
+    res = analyze_products(prods)
+    if not res:
         return None
-    return {
-        "n": stats["n"], "min": stats["min"], "median": stats["median"],
-        "avg": round(mean([p for p in prices if p > 0])), "max": stats["max"],
-        "rocket": round(sum(1 for p in prods if p.get("isRocket")) / len(prods) * 100),
-        "top": [{"title": p.get("productName", ""), "price": int(p.get("productPrice") or 0),
-                 "rocket": bool(p.get("isRocket")), "link": p.get("productUrl", ""),
-                 "image": p.get("productImage", "")} for p in prods[:10]],
-        "updated_at": dt.datetime.now(KST).isoformat(timespec="seconds"),
-    }
+    res["rocket"] = round(sum(1 for p in res["top"] if p["rocket"]) / len(res["top"]) * 100)
+    res["updated_at"] = dt.datetime.now(KST).isoformat(timespec="seconds")
+    return res
 
 
 # ---------------------------------------------------------------- 점수
@@ -542,10 +572,9 @@ def main():
 
     # 3) 쿠팡 대상 선정 (가장 오래된 것부터 COUPANG_MAX개)
     ca, cs = env("COUPANG_ACCESS_KEY"), env("COUPANG_SECRET_KEY")
-    coupang_targets = set()
+    coupang_order = []
     if ca and cs:
-        order = sorted(conf_items, key=lambda c: ((prev_items.get(c["id"]) or {}).get("coupang") or {}).get("updated_at", ""))
-        coupang_targets = {c["id"] for c in order[:COUPANG_MAX]}
+        coupang_order = sorted(conf_items, key=lambda c: ((prev_items.get(c["id"]) or {}).get("coupang") or {}).get("updated_at", ""))
 
     # 4) 품목별 수집
     items = []
@@ -574,14 +603,28 @@ def main():
         it["monthly"] = monthly.get(c["keyword"]) or p.get("monthly")
         it["forecast"] = forecast_item(it["monthly"], buzz, now.strftime("%Y-%m"))
         it["coupang"] = p.get("coupang")
-        if c["id"] in coupang_targets:
-            try:
-                it["coupang"] = coupang(c["keyword"], ca, cs) or it["coupang"]
-                sources["coupang"] = True
-            except Exception as e:
-                errors.append(f"쿠팡 {c['name']}: {e}")
         items.append(it)
         log(f"  ✓ {c['name']}")
+
+    # 4-1) 쿠팡 상품 TOP10·가격 (시간당 호출 제한 → 10개씩 회차 나눠 수집)
+    by_id = {it["id"]: it for it in items}
+    for rnd in range(COUPANG_ROUNDS):
+        batch = coupang_order[rnd * COUPANG_MAX:(rnd + 1) * COUPANG_MAX]
+        if not batch:
+            break
+        if rnd:
+            log(f"쿠팡 호출 제한 대기 {COUPANG_WAIT // 60}분 후 {rnd + 1}회차 수집…")
+            time.sleep(COUPANG_WAIT)
+        for c in batch:
+            try:
+                by_id[c["id"]]["coupang"] = coupang(c["keyword"], ca, cs) or by_id[c["id"]]["coupang"]
+                sources["coupang"] = True
+                log(f"  쿠팡 ✓ {c['name']}")
+            except Exception as e:
+                errors.append(f"쿠팡 {c['name']}: {e}")
+                if "429" in str(e):
+                    break
+            time.sleep(1)
 
     if dev and not sources["naver_shop"] and not hub:
         log("::error::네이버 쇼핑 수집이 전부 실패했습니다. 키를 확인하세요.\n" + "\n".join(errors[:5]))
