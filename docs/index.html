@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>안전용품 시장 레이더</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f6f7f9;--surface:#fff;--surface2:#f1f3f6;--text:#16181d;--muted:#5d6472;--line:#e3e6ec;
+  --accent:#e8590c;--accent-soft:#fff1e8;--good:#2b8a3e;--good-soft:#e9f7ec;--bad:#c92a2a;--bad-soft:#fdecec;--mid:#a26a00;--mid-soft:#fff6db;
+  --g-안전:#1971c2;--g-소방:#e03131;--g-보건:#2f9e44;--g-환경:#0c8599;
+  --radius:14px;--shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1115;--surface:#171a20;--surface2:#1f232b;--text:#e8eaee;--muted:#9aa1ad;--line:#2a2f38;
+  --accent:#ff8a3d;--accent-soft:#2c1c12;--good:#51cf66;--good-soft:#14261a;--bad:#ff6b6b;--bad-soft:#2c1616;--mid:#fcc419;--mid-soft:#2a2410;
+  --g-안전:#4dabf7;--g-소방:#ff6b6b;--g-보건:#69db7c;--g-환경:#3bc9db;--shadow:none;}}
+:root[data-theme="dark"]{
+  --bg:#0f1115;--surface:#171a20;--surface2:#1f232b;--text:#e8eaee;--muted:#9aa1ad;--line:#2a2f38;
+  --accent:#ff8a3d;--accent-soft:#2c1c12;--good:#51cf66;--good-soft:#14261a;--bad:#ff6b6b;--bad-soft:#2c1616;--mid:#fcc419;--mid-soft:#2a2410;
+  --g-안전:#4dabf7;--g-소방:#ff6b6b;--g-보건:#69db7c;--g-환경:#3bc9db;--shadow:none;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px}
+header{background:var(--surface);border-bottom:1px solid var(--line)}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 0;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:34px;height:34px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:#fff;font-weight:800}
+h1{font-size:19px;margin:0;letter-spacing:-.02em}
+.sub{color:var(--muted);font-size:13px}
+.upd{font-size:13px;color:var(--muted);text-align:right}
+.upd b{color:var(--text);font-weight:600}
+.banner{margin:16px 0 0;padding:12px 14px;border-radius:10px;background:var(--mid-soft);color:var(--text);font-size:14px;border:1px solid color-mix(in srgb,var(--mid) 35%,transparent)}
+.banner strong{color:var(--mid)}
+section{margin:22px 0}
+h2{font-size:16px;margin:0 0 12px;letter-spacing:-.01em}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.kpi{padding:14px 16px}
+.kpi .l{font-size:12.5px;color:var(--muted)}
+.kpi .v{font-size:22px;font-weight:700;margin-top:4px;letter-spacing:-.02em}
+.kpi .s{font-size:12.5px;color:var(--muted);margin-top:2px}
+.groups{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.grp{padding:14px 16px;cursor:pointer;border-top:3px solid var(--gc);transition:transform .1s}
+.grp:hover{transform:translateY(-1px)}
+.grp.on{outline:2px solid var(--gc)}
+.grp .t{display:flex;justify-content:space-between;font-weight:700}
+.grp .row{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-top:6px}
+.grp .row b{color:var(--text);font-weight:600}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--text);padding:7px 13px;border-radius:999px;font:inherit;font-size:13.5px;cursor:pointer}
+.chip.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+.search{flex:1;min-width:160px;max-width:280px;margin-left:auto;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:inherit;font-size:14px}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:980px}
+th,td{padding:11px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12.5px;color:var(--muted);font-weight:600;cursor:pointer;user-select:none;background:var(--surface2);position:sticky;top:0}
+th:first-child,td:first-child{text-align:center;width:44px}
+th.l,td.l{text-align:left}
+th .ar{opacity:.5;margin-left:3px}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--surface2)}
+tbody tr.sel{background:var(--accent-soft)}
+.nm{font-weight:600}
+.tag{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:6px;margin-left:6px;color:var(--gc);background:color-mix(in srgb,var(--gc) 13%,transparent);font-weight:600}
+.subt{display:block;font-size:12px;color:var(--muted);font-weight:400}
+.bar{display:inline-flex;align-items:center;gap:8px}
+.bar i{display:block;height:6px;border-radius:3px;background:var(--accent);min-width:2px}
+.bar span{min-width:24px;font-weight:700}
+.up{color:var(--good);font-weight:600}.dn{color:var(--bad);font-weight:600}
+.pill{font-size:12px;padding:2px 8px;border-radius:999px;font-weight:600}
+.pill.낮음{background:var(--good-soft);color:var(--good)}.pill.보통{background:var(--mid-soft);color:var(--mid)}.pill.높음{background:var(--bad-soft);color:var(--bad)}
+.na{color:var(--muted)}
+.cert{max-width:180px;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:bottom;font-size:12.5px;color:var(--muted)}
+#detail{display:none}
+.dhead{padding:18px 18px 4px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.dhead h3{margin:0;font-size:20px;letter-spacing:-.02em}
+.close{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit;font-size:13px}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:14px 18px 18px}
+.box{background:var(--surface2);border-radius:12px;padding:14px}
+.box h4{margin:0 0 10px;font-size:13.5px;color:var(--muted);font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stats div{font-size:12px;color:var(--muted)}
+.stats b{display:block;font-size:16px;color:var(--text);margin-top:2px}
+.note{font-size:13.5px;line-height:1.6}
+.note p{margin:0 0 8px}
+.chartbox{position:relative;height:220px}
+.plist{list-style:none;margin:0;padding:0;font-size:13.5px}
+.plist li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.plist li:last-child{border:none}
+.plist a{color:var(--text);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plist a:hover{text-decoration:underline}
+.plist .pr{font-weight:600;white-space:nowrap}
+.plist .ml{color:var(--muted);font-size:12px}
+.full{grid-column:1/-1}
+footer{color:var(--muted);font-size:12.5px;padding:24px 0 40px;line-height:1.7}
+.theme{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:5px 9px;cursor:pointer;font:inherit;font-size:12px;margin-left:8px}
+@media (max-width:860px){.kpis,.groups{grid-template-columns:repeat(2,1fr)}.dgrid{grid-template-columns:1fr}.upd{text-align:left}.search{max-width:none;margin-left:0}}
+@media (max-width:420px){.groups{grid-template-columns:1fr}.kpi .v{font-size:19px}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header><div class="wrap hd">
+  <div class="brand"><div class="logo">安</div><div><h1>안전·소방·보건·환경 용품 시장 레이더</h1><div class="sub">네이버 쇼핑 · 쿠팡 인기 품목과 가격 현황</div></div></div>
+  <div class="upd" id="upd">불러오는 중…</div>
+</div></header>
+
+<main class="wrap">
+  <div id="banner"></div>
+
+  <section><div class="kpis" id="kpis"></div></section>
+
+  <section><h2>분야별 요약</h2><div class="groups" id="groups"></div></section>
+
+  <section>
+    <h2>품목 순위 <span class="sub" style="font-weight:400">— 행을 누르면 상세 분석이 열립니다</span></h2>
+    <div class="toolbar" id="toolbar"></div>
+    <div class="card tbl-wrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+  </section>
+
+  <section id="detail" class="card"></section>
+
+  <footer>
+    <b>지표 설명</b><br>
+    · <b>인기점수(0~100)</b>: 네이버 월간 검색량(60%) + 데이터랩 관심도(40%)를 정규화한 상대 점수. 실제 판매량은 공개되지 않으므로 수요를 대신 나타내는 추정치입니다.<br>
+    · <b>평균가</b>: 상·하위 5% 이상치(부속품·대량세트)를 제외한 평균. <b>최저가</b>는 원본 최저값이라 부속품이 섞일 수 있으니 <b>하위10%</b> 가격을 실질 진입가로 보세요.<br>
+    · <b>경쟁강도</b>: 네이버 등록 상품 수 ÷ 월간 검색량. 3 미만 낮음(진입 기회), 15 이상 높음.<br>
+    · <b>추세</b>: 최근 4주 관심도 ÷ 직전 4주 관심도 변화율.<br>
+    · 쿠팡 데이터는 API 호출 제한 때문에 실행할 때마다 일부 품목씩 순환 갱신됩니다. 인증 정보는 참고용이니 판매 전 최신 법령을 꼭 확인하세요.
+    <button class="theme" id="theme">테마 전환</button>
+  </footer>
+</main>
+
+<script>
+const $=s=>document.querySelector(s);
+const won=v=>v==null?'<span class="na">–</span>':Math.round(v).toLocaleString('ko-KR')+'원';
+const num=v=>v==null?'<span class="na">–</span>':Math.round(v).toLocaleString('ko-KR');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const GROUPS=['안전','소방','보건','환경'];
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const S={data:null,hist:null,group:'전체',q:'',sort:{k:'score',d:-1},sel:null,charts:[]};
+
+const COLS=[
+  {k:'rank',t:'#',v:(it,i)=>i+1,nosort:1},
+  {k:'name',t:'품목',l:1,v:it=>it.name,h:it=>`<span class="nm">${esc(it.name)}</span><span class="tag" style="--gc:var(--g-${it.group})">${it.group}</span><span class="subt">${esc(it.sub)} · "${esc(it.keyword)}"</span>`},
+  {k:'score',t:'인기점수',v:it=>it.score,h:it=>it.score==null?'<span class="na">–</span>':`<span class="bar"><i style="width:${Math.max(2,it.score*0.6)}px"></i><span>${it.score}</span></span>`},
+  {k:'vol',t:'월 검색량',v:it=>it.search?.total,h:it=>num(it.search?.total)},
+  {k:'growth',t:'4주 추세',v:it=>it.trend?.growth,h:it=>{const g=it.trend?.growth;return g==null?'<span class="na">–</span>':`<span class="${g>=0?'up':'dn'}">${g>=0?'▲':'▼'} ${Math.abs(g).toFixed(1)}%</span>`}},
+  {k:'nmin',t:'네이버 최저가',v:it=>it.naver?.min,h:it=>won(it.naver?.min)},
+  {k:'np10',t:'하위10%',v:it=>it.naver?.p10,h:it=>won(it.naver?.p10)},
+  {k:'navg',t:'평균가',v:it=>it.naver?.avg,h:it=>`<b>${won(it.naver?.avg)}</b>`},
+  {k:'nmed',t:'중앙값',v:it=>it.naver?.median,h:it=>won(it.naver?.median)},
+  {k:'cmin',t:'쿠팡 최저가',v:it=>it.coupang?.min,h:it=>won(it.coupang?.min)},
+  {k:'cavg',t:'쿠팡 평균',v:it=>it.coupang?.avg,h:it=>won(it.coupang?.avg)},
+  {k:'items',t:'등록 상품 수',v:it=>it.naver?.total,h:it=>num(it.naver?.total)},
+  {k:'comp',t:'경쟁강도',v:it=>it.competition?.ratio,h:it=>it.competition?`<span class="pill ${it.competition.level}">${it.competition.level}</span>`:'<span class="na">–</span>'},
+  {k:'cert',t:'인증',l:1,v:it=>it.cert,h:it=>`<span class="cert" title="${esc(it.cert)}">${esc(it.cert)}</span>`},
+];
+
+function fmtDate(s){if(!s)return'–';const d=new Date(s);return d.toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+
+async function load(){
+  try{
+    const t='?v='+Date.now();
+    const [d,h]=await Promise.all([fetch('data/latest.json'+t).then(r=>{if(!r.ok)throw 0;return r.json()}),
+      fetch('data/history.json'+t).then(r=>r.ok?r.json():null).catch(()=>null)]);
+    S.data=d;S.hist=h;render();
+  }catch(e){$('#upd').textContent='데이터를 불러오지 못했습니다.';}
+}
+
+function filtered(){
+  let xs=S.data.items.slice();
+  if(S.group!=='전체')xs=xs.filter(x=>x.group===S.group);
+  if(S.q){const q=S.q.toLowerCase();xs=xs.filter(x=>(x.name+x.keyword+x.sub).toLowerCase().includes(q))}
+  const c=COLS.find(c=>c.k===S.sort.k);
+  xs.sort((a,b)=>{const va=c.v(a),vb=c.v(b);if(va==null&&vb==null)return 0;if(va==null)return 1;if(vb==null)return -1;
+    return (typeof va==='string'?va.localeCompare(vb,'ko'):va-vb)*S.sort.d});
+  return xs;
+}
+
+function render(){
+  const {meta,items}=S.data;
+  $('#upd').innerHTML=`마지막 업데이트 <b>${fmtDate(meta.updated_at)}</b><br>다음 자동 업데이트 예정 ${fmtDate(meta.next_update)}`;
+  $('#banner').innerHTML=meta.sample?`<div class="banner"><strong>샘플 데이터 화면입니다.</strong> 지금 보이는 숫자는 디자인 확인용 가상 데이터예요. API 키를 등록하면 첫 수집 때 실제 네이버·쿠팡 데이터로 자동 교체됩니다.</div>`:
+    (meta.errors?.length?`<div class="banner"><strong>일부 수집 경고 ${meta.errors.length}건</strong> — 이전 데이터를 유지한 항목이 있습니다.</div>`:'');
+  renderKpis();renderGroups();renderToolbar();renderTable();
+}
+
+function renderKpis(){
+  const xs=S.data.items, src=S.data.meta.sources||{};
+  const top=xs.filter(x=>x.score!=null).sort((a,b)=>b.score-a.score)[0];
+  const rise=xs.filter(x=>x.trend?.growth!=null).sort((a,b)=>b.trend.growth-a.trend.growth)[0];
+  const opp=xs.filter(x=>x.competition&&x.score!=null).sort((a,b)=>(b.score/(1+b.competition.ratio))-(a.score/(1+a.competition.ratio)))[0];
+  const on=Object.values(src).filter(Boolean).length;
+  $('#kpis').innerHTML=[
+    ['추적 품목',xs.length+'개',`${GROUPS.length}개 분야 · 데이터 소스 ${on}/4 연결`],
+    ['인기 1위',top?top.name:'–',top?`인기점수 ${top.score} · 평균 ${Math.round(top.naver?.avg||0).toLocaleString()}원`:''],
+    ['최근 급상승',rise?rise.name:'–',rise?`최근 4주 관심도 ${rise.trend.growth>=0?'+':''}${rise.trend.growth}%`:''],
+    ['진입 기회 후보',opp?opp.name:'–',opp?`인기 대비 경쟁 낮음 (경쟁강도 ${opp.competition.level})`:'검색광고 API 연결 시 표시'],
+  ].map(([l,v,s])=>`<div class="card kpi"><div class="l">${l}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`).join('');
+}
+
+function renderGroups(){
+  $('#groups').innerHTML=GROUPS.map(g=>{
+    const xs=S.data.items.filter(x=>x.group===g);
+    const sc=xs.filter(x=>x.score!=null);
+    const best=sc.sort((a,b)=>b.score-a.score)[0];
+    const avgScore=sc.length?Math.round(sc.reduce((s,x)=>s+x.score,0)/sc.length):null;
+    const vol=xs.reduce((s,x)=>s+(x.search?.total||0),0);
+    return `<div class="card grp ${S.group===g?'on':''}" style="--gc:var(--g-${g})" data-g="${g}">
+      <div class="t"><span>${g}</span><span class="sub">${xs.length}개 품목</span></div>
+      <div class="row"><span>평균 인기점수</span><b>${avgScore??'–'}</b></div>
+      <div class="row"><span>월 검색량 합계</span><b>${vol?vol.toLocaleString():'–'}</b></div>
+      <div class="row"><span>분야 1위</span><b>${best?esc(best.name):'–'}</b></div></div>`}).join('');
+  document.querySelectorAll('.grp').forEach(el=>el.onclick=()=>{S.group=S.group===el.dataset.g?'전체':el.dataset.g;renderGroups();renderToolbar();renderTable()});
+}
+
+function renderToolbar(){
+  $('#toolbar').innerHTML=['전체',...GROUPS].map(g=>`<button class="chip ${S.group===g?'on':''}" data-g="${g}">${g}</button>`).join('')+
+    `<input class="search" id="q" placeholder="품목 검색 (예: 소화기)" value="${esc(S.q)}">`;
+  document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{S.group=el.dataset.g;renderGroups();renderToolbar();renderTable()});
+  $('#q').oninput=e=>{S.q=e.target.value;renderTable()};
+}
+
+function renderTable(){
+  $('#thead').innerHTML='<tr>'+COLS.map(c=>`<th class="${c.l?'l':''}" data-k="${c.k}">${c.t}${S.sort.k===c.k?`<span class="ar">${S.sort.d<0?'▼':'▲'}</span>`:''}</th>`).join('')+'</tr>';
+  document.querySelectorAll('th').forEach(th=>{const c=COLS.find(c=>c.k===th.dataset.k);if(c.nosort)return;
+    th.onclick=()=>{S.sort={k:c.k,d:S.sort.k===c.k?-S.sort.d:(c.l?1:-1)};renderTable()}});
+  const xs=filtered();
+  $('#tbody').innerHTML=xs.map((it,i)=>`<tr data-id="${it.id}" class="${S.sel===it.id?'sel':''}">`+COLS.map(c=>`<td class="${c.l?'l':''}">${c.h?c.h(it,i):c.v(it,i)}</td>`).join('')+'</tr>').join('')||
+    `<tr><td colspan="${COLS.length}" class="na" style="text-align:center;padding:30px">검색 결과가 없습니다</td></tr>`;
+  document.querySelectorAll('tbody tr[data-id]').forEach(tr=>tr.onclick=()=>openDetail(tr.dataset.id));
+}
+
+function plist(arr,coupang){
+  if(!arr?.length)return '<p class="na">데이터 없음</p>';
+  return '<ul class="plist">'+arr.map(p=>`<li><span style="min-width:0;overflow:hidden"><a href="${esc(p.link)||'#'}" target="_blank" rel="noopener">${esc(p.title)}</a>
+    <div class="ml">${coupang?(p.rocket?'🚀 로켓배송':'일반배송'):esc(p.mall)}</div></span><span class="pr">${won(p.price)}</span></li>`).join('')+'</ul>';
+}
+
+function openDetail(id){
+  S.sel=id;renderTable();
+  const it=S.data.items.find(x=>x.id===id), n=it.naver||{}, c=it.coupang, h=S.hist?.items?.[id];
+  const el=$('#detail');el.style.display='block';
+  el.innerHTML=`<div class="dhead"><div><h3>${esc(it.name)} <span class="tag" style="--gc:var(--g-${it.group})">${it.group} · ${esc(it.sub)}</span></h3>
+      <div class="sub">검색어 "${esc(it.keyword)}" · 인기점수 ${it.score??'–'} · 경쟁강도 ${it.competition?it.competition.level+' ('+it.competition.ratio+')':'–'}</div></div>
+      <button class="close" id="close">닫기 ✕</button></div>
+    <div class="dgrid">
+      <div class="box"><h4>네이버 가격 통계 (분석 상품 ${n.n??0}개)</h4><div class="stats">
+        <div>최저가<b>${won(n.min)}</b></div><div>하위10%<b>${won(n.p10)}</b></div><div>중앙값<b>${won(n.median)}</b></div>
+        <div>평균가<b>${won(n.avg)}</b></div><div>상위10%<b>${won(n.p90)}</b></div><div>최고가<b>${won(n.max)}</b></div>
+        <div>등록 상품<b>${num(n.total)}</b></div><div>판매처 수<b>${num(n.sellers)}</b></div><div>월 검색량<b>${num(it.search?.total)}</b></div></div></div>
+      <div class="box"><h4>쿠팡 가격 통계 ${c?`(상위 ${c.n}개)`:''}</h4>${c?`<div class="stats">
+        <div>최저가<b>${won(c.min)}</b></div><div>중앙값<b>${won(c.median)}</b></div><div>평균가<b>${won(c.avg)}</b></div>
+        <div>최고가<b>${won(c.max)}</b></div><div>로켓배송 비율<b>${c.rocket}%</b></div><div>네이버 대비<b>${n.avg?((c.avg/n.avg-1)*100>=0?'+':'')+((c.avg/n.avg-1)*100).toFixed(0)+'%':'–'}</b></div></div>
+        <div class="sub" style="margin-top:8px">쿠팡 갱신: ${fmtDate(c.updated_at)}</div>`:'<p class="na">아직 수집되지 않았습니다 (쿠팡 키 등록 후 순환 수집)</p>'}</div>
+      <div class="box"><h4>가격대 분포 (네이버, 이상치 제외)</h4><div class="chartbox"><canvas id="cHist"></canvas></div></div>
+      <div class="box"><h4>6개월 검색 관심도 추이 (기준 "${esc(S.data.meta.anchor)}" 평균=100)</h4><div class="chartbox"><canvas id="cTrend"></canvas></div></div>
+      ${h&&S.hist.dates.length>1?`<div class="box full"><h4>수집 회차별 가격 변화</h4><div class="chartbox"><canvas id="cHist2"></canvas></div></div>`:''}
+      <div class="box"><h4>네이버 상위 상품 (네이버 랭킹순)</h4>${plist(n.top)}</div>
+      <div class="box"><h4>쿠팡 상위 상품</h4>${plist(c?.top,true)}</div>
+      <div class="box full note"><h4>소싱 메모</h4>
+        <p><b>인증·법규</b> — ${esc(it.cert)}</p><p><b>시장 메모</b> — ${esc(it.memo)}</p>
+        ${n.categories?.length?`<p><b>네이버 주요 분류</b> — ${n.categories.map(x=>esc(x.path)+' ('+x.share+'%)').join(', ')}</p>`:''}</div>
+    </div>`;
+  $('#close').onclick=()=>{el.style.display='none';S.sel=null;renderTable()};
+  drawCharts(it,h);
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function drawCharts(it,h){
+  S.charts.forEach(c=>c.destroy());S.charts=[];
+  if(typeof Chart==='undefined')return;
+  const acc=css('--accent'),mut=css('--muted'),line=css('--line'),blue=css('--g-안전');
+  Chart.defaults.font.family='Pretendard, sans-serif';Chart.defaults.color=mut;
+  const grid={color:line},base={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}};
+  const hs=it.naver?.hist;
+  if(hs){const labels=hs.counts.map((_,i)=>`${Math.round(hs.edges[i]/1000).toLocaleString()}~${Math.round(hs.edges[i+1]/1000).toLocaleString()}천`);
+    S.charts.push(new Chart($('#cHist'),{type:'bar',data:{labels,datasets:[{data:hs.counts,backgroundColor:acc,borderRadius:4}]},
+      options:{...base,scales:{x:{grid:{display:false},ticks:{maxRotation:45,font:{size:10}}},y:{grid,title:{display:true,text:'상품 수'}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:t=>`${hs.edges[t[0].dataIndex].toLocaleString()}원 ~ ${hs.edges[t[0].dataIndex+1].toLocaleString()}원`}}}}}));}
+  const sr=it.trend?.series;
+  if(sr?.length){S.charts.push(new Chart($('#cTrend'),{type:'line',data:{labels:sr.map(s=>s.p.slice(5)),datasets:[{data:sr.map(s=>s.r),borderColor:blue,backgroundColor:blue+'22',fill:true,tension:.3,pointRadius:0,borderWidth:2}]},
+    options:{...base,interaction:{intersect:false,mode:'index'},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:7}},y:{grid,beginAtZero:true}}}}));}
+  if(h&&S.hist.dates.length>1&&$('#cHist2')){
+    const ds=[['네이버 평균가',h.avg,acc],['네이버 최저가',h.min,mut],['쿠팡 평균가',h.cp_avg,blue]].filter(d=>d[1].some(v=>v!=null))
+      .map(([label,data,color])=>({label,data,borderColor:color,backgroundColor:color,tension:.25,pointRadius:3,borderWidth:2,spanGaps:true}));
+    S.charts.push(new Chart($('#cHist2'),{type:'line',data:{labels:S.hist.dates.map(d=>d.slice(5)),datasets:ds},
+      options:{...base,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${Math.round(c.raw).toLocaleString()}원`}}},
+      interaction:{intersect:false,mode:'index'},scales:{x:{grid:{display:false}},y:{grid,ticks:{callback:v=>v.toLocaleString()}}}}}));}
+}
+
+$('#theme').onclick=()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
+  r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('theme',r.dataset.theme)}catch(e){};if(S.sel)openDetail(S.sel)};
+try{const t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+load();
+</script>
+</body>
+</html>
