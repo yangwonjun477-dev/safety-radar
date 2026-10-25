@@ -222,19 +222,145 @@ def datalab(keywords, anchor, url, headers):
     return out
 
 
+def datalab_monthly(keywords, anchor, url, headers, years=3):
+    """최근 N년 월간 관심도 (기준 키워드 평균=100). 계절성 분석용."""
+    today = dt.date.today()
+    end = today.replace(day=1) - dt.timedelta(days=1)          # 지난달 말일 (완결된 달만)
+    start = dt.date(end.year - years, end.month, 1) + dt.timedelta(days=32)
+    start = start.replace(day=1)
+    others = [k for k in dict.fromkeys(keywords) if k != anchor]
+    out = {}
+    for i in range(0, max(len(others), 1), 4):
+        batch = [anchor] + others[i:i + 4]
+        body = {"startDate": start.isoformat(), "endDate": end.isoformat(), "timeUnit": "month",
+                "keywordGroups": [{"groupName": k, "keywords": [k]} for k in batch]}
+        r = request(url, headers, body)
+        res = {g["title"]: g.get("data", []) for g in r.get("results", [])}
+        a_mean = mean([d["ratio"] for d in res.get(anchor, [])]) or 1
+        for k in batch:
+            if k == anchor and k in out:
+                continue
+            out[k] = [{"p": d["period"][:7], "r": round(d["ratio"] * 100 / a_mean, 2)} for d in res.get(k, [])]
+        time.sleep(0.2)
+    return out
+
+
+# ---------------------------------------------------------------- 수요 예측 모델 (계절성 × 추세 × 언론 관심도)
+def _add_month(ym, n):
+    y, m = int(ym[:4]), int(ym[5:7]) - 1 + n
+    return f"{y + m // 12:04d}-{m % 12 + 1:02d}"
+
+
+def forecast_item(monthly, buzz, base_month, horizons=(1, 2, 3)):
+    """
+    monthly : [{"p":"YYYY-MM","r":값}] 최근 3년 월간 관심도
+    base_month : 이번 달 "YYYY-MM" (데이터는 지난달까지)
+    반환: 월별 계절지수, 성수기, 신뢰도, 전년 대비 추세, 1·2·3개월 후 예측치
+    """
+    pts = [(x["p"], x["r"]) for x in monthly or [] if x.get("r") is not None]
+    if len(pts) < 15 or sum(v for _, v in pts) <= 0:
+        return None
+    months = [p for p, _ in pts]
+    vals = [max(v, 0.01) for _, v in pts]
+    n = len(vals)
+    # 1) 계절지수: 각 달 값 ÷ 그 달을 중심으로 한 12개월 이동평균
+    ratios = {m: [] for m in range(1, 13)}
+    for i in range(6, n - 6):
+        cma = (sum(vals[i - 6:i + 6]) + sum(vals[i - 5:i + 7])) / 24
+        if cma > 0:
+            ratios[int(months[i][5:7])].append(vals[i] / cma)
+    for i in list(range(0, 6)) + list(range(n - 6, n)):           # 가장자리: 연평균 대비 비율로 보완
+        lo, hi = max(0, i - 11), min(n, i + 12)
+        base = mean(vals[lo:hi])
+        if base:
+            m = int(months[i][5:7])
+            if len(ratios[m]) < 2:
+                ratios[m].append(vals[i] / base)
+    si = {m: (mean(v) if v else 1.0) for m, v in ratios.items()}
+    norm_k = mean(list(si.values())) or 1
+    si = {m: v / norm_k for m, v in si.items()}
+    spread = {m: (statistics.pstdev(v) if len(v) > 1 else 0.35) for m, v in ratios.items()}
+
+    # 2) 계절성 제거 후 수준과 전년 대비 추세
+    des = [v / si[int(p[5:7])] for p, v in zip(months, vals)]
+    level = mean(des[-3:])
+    yoy = None
+    if n >= 18:
+        last6, prev6 = mean(des[-6:]), mean(des[-18:-12])
+        if prev6:
+            yoy = max(-0.5, min(0.8, last6 / prev6 - 1))
+    drift = (1 + (yoy or 0)) ** (1 / 12) - 1
+
+    # 3) 이번 달 추정치(기준)와 h개월 후 예측치
+    gap = 1  # 데이터 마지막 달 → 이번 달
+    cur = level * (1 + drift) ** gap * si[int(base_month[5:7])]
+    buzz_boost = min(buzz or 0, 60) / 60 * 0.08                 # 최근 1주 뉴스가 많으면 최대 +8%
+    out = []
+    for h in horizons:
+        tm = _add_month(base_month, h)
+        mi = int(tm[5:7])
+        f = level * (1 + drift) ** (gap + h) * si[mi] * (1 + buzz_boost * (0.6 ** (h - 1)))
+        out.append({"h": h, "month": tm, "value": round(f, 2), "si": round(si[mi], 3),
+                    "change": round((f / cur - 1) * 100, 1) if cur else None,
+                    "spread": round(spread[mi], 3)})
+    peak = max(si, key=si.get)
+    low = min(si, key=si.get)
+    seasonality = max(si.values()) / max(min(si.values()), 0.05)
+    return {"si": {str(m): round(v, 3) for m, v in si.items()}, "peak": peak, "low": low,
+            "seasonality": round(seasonality, 2), "yoy": round(yoy * 100, 1) if yoy is not None else None,
+            "current": round(cur, 2), "buzz": buzz, "years": round(n / 12, 1), "h": out}
+
+
+def rank_forecasts(items):
+    """horizon별 추천 점수(0~100) = 예상 수요 규모 55% + 현재 대비 증가율 35% + 언론 관심 10%, 근거 문장 생성"""
+    for h in (1, 2, 3):
+        rows = [(it, next(x for x in it["forecast"]["h"] if x["h"] == h)) for it in items if it.get("forecast")]
+        if not rows:
+            continue
+        size = norm([math.log10(x["value"] + 1) for _, x in rows])
+        chg = norm([max(-60, min(150, x["change"] or 0)) for _, x in rows])
+        bz = norm([math.log10((it["forecast"].get("buzz") or 0) + 1) for it, _ in rows])
+        for (it, x), a, b, c in zip(rows, size, chg, bz):
+            fc = it["forecast"]
+            x["score"] = round(100 * (0.55 * a + 0.35 * b + 0.10 * (c or 0)))
+            yrs = fc["years"]
+            x["conf"] = "높음" if x["spread"] < 0.15 and yrs >= 2.5 else ("보통" if x["spread"] < 0.3 else "낮음")
+            mi = int(x["month"][5:7])
+            r = []
+            if x["si"] >= 1.12:
+                r.append(f"예년 {mi}월 관심도가 연평균보다 {round((x['si'] - 1) * 100)}% 높은 성수기")
+            elif x["si"] <= 0.88:
+                r.append(f"예년 {mi}월은 연평균보다 {round((1 - x['si']) * 100)}% 낮은 비수기")
+            if x["change"] is not None and abs(x["change"]) >= 5:
+                r.append(f"이번 달 대비 예상 수요 {'+' if x['change'] > 0 else ''}{x['change']:.0f}%")
+            if fc.get("yoy") is not None and abs(fc["yoy"]) >= 8:
+                r.append(f"전년 같은 시기보다 관심도 {'+' if fc['yoy'] > 0 else ''}{fc['yoy']:.0f}%")
+            if (fc.get("buzz") or 0) >= 10:
+                r.append(f"최근 1주 관련 뉴스 {fc['buzz']}건")
+            if fc["peak"] == mi:
+                r.append(f"연중 최대 성수기({mi}월)")
+            x["reasons"] = r or ["연중 수요가 고른 품목 (계절 변동 작음)"]
+
+
 # ---------------------------------------------------------------- NAVER API HUB: 뉴스 / 쇼핑인사이트
 def hub_news(keyword, headers, n=NEWS_PER_ITEM):
-    q = urllib.parse.urlencode({"query": keyword, "display": n, "start": 1, "sort": "date"})
+    """최신 뉴스 n건 + 최근 7일 기사 수(언론 관심도, 최대 100)"""
+    q = urllib.parse.urlencode({"query": keyword, "display": 100, "start": 1, "sort": "date"})
     r = request(f"{HUB_BASE}/search/v1/news?{q}", headers)
-    out = []
-    for it in r.get("items", [])[:n]:
+    now = dt.datetime.now(KST)
+    out, week = [], 0
+    for it in r.get("items", []):
         try:
-            date = dt.datetime.strptime(it.get("pubDate", ""), "%a, %d %b %Y %H:%M:%S %z").astimezone(KST).isoformat(timespec="minutes")
+            d = dt.datetime.strptime(it.get("pubDate", ""), "%a, %d %b %Y %H:%M:%S %z").astimezone(KST)
         except ValueError:
-            date = None
-        out.append({"title": clean(it.get("title")), "desc": clean(it.get("description"))[:140],
-                    "link": it.get("originallink") or it.get("link", ""), "date": date})
-    return out
+            d = None
+        if d and (now - d).days < 7:
+            week += 1
+        if len(out) < n:
+            out.append({"title": clean(it.get("title")), "desc": clean(it.get("description"))[:140],
+                        "link": it.get("originallink") or it.get("link", ""),
+                        "date": d.isoformat(timespec="minutes") if d else None})
+    return out, week
 
 
 def shop_insight(categories, headers):
@@ -381,6 +507,17 @@ def main():
         except Exception as e:
             errors.append(f"검색어트렌드({kind}): {e}")
 
+    # 1-1) 월간 3년 추이 (계절성 예측용)
+    monthly = {}
+    for kind, headers in (("hub", hub), ("dev", dev)):
+        if not headers or monthly:
+            continue
+        try:
+            monthly = datalab_monthly(keywords, anchor, DATALAB_URL[kind], headers)
+            log(f"월간 3년 추이: {len(monthly)}개 키워드")
+        except Exception as e:
+            errors.append(f"월간 추이({kind}): {e}")
+
     # 1-2) 쇼핑인사이트 (keywords.json 의 shop_categories 에 카테고리 코드를 넣은 경우만)
     insight = (prev or {}).get("meta", {}).get("shop_insight") if not is_sample else None
     cats = [c for c in cfg.get("shop_categories", []) if str(c.get("code", "")).strip()]
@@ -423,15 +560,19 @@ def main():
             except Exception as e:
                 errors.append(f"쇼핑 {c['name']}: {e}")
         it["news"] = p.get("news")
+        buzz = p.get("buzz")
         if hub:
             try:
-                it["news"] = hub_news(c["keyword"], hub)
+                it["news"], buzz = hub_news(c.get("news_keyword") or c["keyword"], hub)
                 sources["news"] = True
             except Exception as e:
                 errors.append(f"뉴스 {c['name']}: {e}")
             time.sleep(0.1)
         it["trend"] = trends.get(c["keyword"]) or p.get("trend")
         it["search"] = volumes.get(c["keyword"]) or p.get("search")
+        it["buzz"] = buzz
+        it["monthly"] = monthly.get(c["keyword"]) or p.get("monthly")
+        it["forecast"] = forecast_item(it["monthly"], buzz, now.strftime("%Y-%m"))
         it["coupang"] = p.get("coupang")
         if c["id"] in coupang_targets:
             try:
@@ -450,12 +591,16 @@ def main():
         return 1
 
     score_items(items)
+    rank_forecasts(items)
     latest = {
         "meta": {
             "updated_at": now.isoformat(timespec="seconds"),
             "next_update": (now + dt.timedelta(hours=72)).isoformat(timespec="seconds"),
             "sample": False, "anchor": anchor, "sources": sources, "errors": errors[:20],
             "shop_insight": insight,
+            "forecast": {"base_month": now.strftime("%Y-%m"),
+                         "months": [_add_month(now.strftime("%Y-%m"), h) for h in (1, 2, 3)],
+                         "model": "계절지수(최근 3년 월간 검색 관심도) × 전년 대비 추세 × 최근 뉴스 관심도"},
         },
         "items": items,
     }
