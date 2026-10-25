@@ -216,8 +216,38 @@ tbody tr.sel{background:var(--accent-soft)}
 .plist .ml{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .full{grid-column:1/-1}
 
+/* 인기 상품 TOP10 */
+.pstats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+.pst{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.pst .l{font-size:12px;color:var(--muted);font-weight:600}
+.pst .v{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
+.pst .s{font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pst.lo{border-color:color-mix(in srgb,var(--good) 45%,transparent);background:var(--good-soft)}
+.pst.lo .v{color:var(--good)}
+.golink{display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:12.5px;font-weight:700;color:#fff;background:var(--good);padding:5px 10px;border-radius:8px;text-decoration:none}
+.ptable{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+.ptable table{min-width:640px;font-size:13.5px}
+.ptable td{vertical-align:middle;padding:9px 10px}
+.ptable .pn{display:flex;align-items:center;gap:10px;min-width:0;max-width:440px}
+.ptable .pn img{width:44px;height:44px;border-radius:8px;object-fit:cover;background:var(--surface2);flex-shrink:0}
+.ptable .pn a{color:var(--text);text-decoration:none;font-weight:600;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.ptable .pn a:hover{text-decoration:underline}
+.ptable tr.lo{background:var(--good-soft)}
+.ptable tr.sus td{opacity:.6}
+.bdg{display:inline-block;font-size:11px;font-weight:800;padding:1px 7px;border-radius:6px;margin-left:4px;white-space:nowrap}
+.bdg.lo{background:var(--good);color:#fff}.bdg.sus{background:var(--mid-soft);color:var(--mid)}.bdg.rk{background:var(--surface2);color:var(--muted)}
+.refs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.refs a{display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);text-decoration:none;font-size:13px;font-weight:700}
+.refs a:hover{border-color:var(--accent);color:var(--accent)}
+.refs a i{font-style:normal;font-size:11px;font-weight:800;color:#fff;padding:1px 6px;border-radius:5px}
+.rec .lp{font-size:12.5px;margin:-4px 0 10px;color:var(--muted)}
+.rec .lp a{color:var(--good);font-weight:700;text-decoration:none}
+@media (max-width:860px){.pstats{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.ptable table{min-width:0}.ptable th:nth-child(4),.ptable td:nth-child(4),.ptable th:nth-child(5),.ptable td:nth-child(5){display:none}.ptable .pn img{width:36px;height:36px}.ptable td{white-space:normal}.ptable td:nth-child(3){white-space:nowrap}.pst .v{font-size:17px}}
+
 /* 뉴스 */
-.news{display:grid;grid-template-columns:repeat(2,1fr);gap:0 28px;padding:6px 22px}
+.news{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 28px;padding:6px 22px}
+.news>div{min-width:0}
 
 /* 푸터 */
 footer{background:#0f1729;color:#a9b4c8;margin-top:60px;font-size:13px;line-height:1.75}
@@ -411,7 +441,8 @@ const COLS=[
   {k:'vol',t:'월 검색량',v:it=>it.search?.total,h:it=>num(it.search?.total)},
   {k:'navg',t:'평균가',v:it=>it.naver?.avg,h:it=>`<b>${won(it.naver?.avg)}</b>`},
   {k:'nmin',t:'최저가',v:it=>it.naver?.min,h:it=>won(it.naver?.min)},
-  {k:'cavg',t:'쿠팡 평균',v:it=>it.coupang?.avg,h:it=>won(it.coupang?.avg)},
+  {k:'cmin',t:'실질 최저가',v:it=>prodSrc(it)?.d.real_min,h:it=>won(prodSrc(it)?.d.real_min)},
+  {k:'cavg',t:'평균 판매가',v:it=>prodSrc(it)?.d.avg,h:it=>won(prodSrc(it)?.d.avg)},
   {k:'comp',t:'경쟁강도',v:it=>it.competition?.ratio,h:it=>it.competition?`<span class="pill ${it.competition.level}">${it.competition.level}</span>`:'<span class="na">–</span>'},
   {k:'cert',t:'인증',l:1,v:it=>it.cert,h:it=>`<span class="cert" title="${esc(it.cert)}">${esc(it.cert)}</span>`},
 ];
@@ -439,7 +470,7 @@ function render(){
   $('#upd').innerHTML=`최종 갱신 <b>${fmtDate(meta.updated_at)}</b><span class="nx"> · 다음 갱신 ${fmtDate(meta.next_update)}</span>`;
   let n='';
   if(meta.sample)n+=`<div class="notice"><strong>샘플 데이터 화면입니다.</strong> 지금 보이는 숫자는 디자인 확인용 가상 데이터예요.</div>`;
-  else if(!meta.sources?.naver_shop&&!items.some(x=>x.naver))n+=`<div class="notice"><strong>가격 데이터 미연결</strong> — 현재는 NAVER API HUB로 검색 추세·뉴스·AI 예측을 제공합니다. 가격·상품 수는 네이버 개발자센터 쇼핑 검색 키를 등록하면 표시됩니다.</div>`;
+  else if(!items.some(x=>prodSrc(x)))n+=`<div class="notice"><strong>가격 데이터 미연결</strong> — 현재는 NAVER API HUB로 검색 추세·뉴스·AI 예측을 제공합니다. 상품 TOP10·최저가·평균가는 쿠팡 파트너스 API 키를 등록하면 표시되며, 지금은 품목 상세의 쇼핑몰 바로가기(판매량순·최저가순)로 확인할 수 있습니다.</div>`;
   if(meta.errors?.length)n+=`<div class="notice"><strong>일부 수집 경고 ${meta.errors.length}건</strong> — 이전 데이터를 유지한 항목이 있습니다.</div>`;
   $('#notices').innerHTML=n;
   $$('.qm').forEach(el=>{const m=months()[el.dataset.h-1];if(m)el.textContent=`${el.dataset.h}개월 후 (${mLabel(m)})`});
@@ -572,6 +603,7 @@ function renderAI(){
       <div class="nm">${esc(it.name)}</div>
       <div class="nums"><div>추천 점수<b>${x.score}</b></div><div>예상 수요<b class="${x.change>=0?'up':'dn'}">${pc(x.change,0)}</b></div><div style="margin-left:auto;text-align:right">신뢰도<br><span class="conf ${x.conf}">${x.conf}</span></div></div>
       <div class="sbar"><i style="width:${x.score}%"></i></div>
+      ${(()=>{const ps=prodSrc(it);if(!ps)return'';const lo=ps.d.real_min_item;return `<div class="lp">최저가 ${lo?.link?`<a href="${esc(lo.link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${won(ps.d.real_min)} ↗</a>`:won(ps.d.real_min)} · 평균 ${won(ps.d.avg)}</div>`})()}
       <ul>${x.reasons.slice(0,3).map(r=>`<li>${esc(r)}</li>`).join('')}</ul>
       <div class="season">${seasonSvg(it.forecast.si,tm)}<span>월별 계절 패턴<br>성수기 ${it.forecast.peak}월</span></div>
     </article>`}).join('');
@@ -600,7 +632,7 @@ function filtered(){
 }
 function renderTable(){
   const it0=S.data.items, has=k=>it0.some(x=>x[k]);
-  const cols=COLS.filter(c=>!(['navg','nmin','comp'].includes(c.k)&&!has('naver'))&&!(c.k==='cavg'&&!has('coupang'))&&!(c.k==='vol'&&!has('search'))&&!(['f1','f3','peak'].includes(c.k)&&!has('forecast'))&&!(c.k==='buzz'&&!it0.some(x=>x.buzz!=null)));
+  const cols=COLS.filter(c=>!(['navg','nmin','comp'].includes(c.k)&&!has('naver'))&&!(['cmin','cavg'].includes(c.k)&&!it0.some(x=>prodSrc(x)))&&!(c.k==='vol'&&!has('search'))&&!(['f1','f3','peak'].includes(c.k)&&!has('forecast'))&&!(c.k==='buzz'&&!it0.some(x=>x.buzz!=null)));
   $('#thead').innerHTML='<tr>'+cols.map(c=>`<th class="${c.l?'l':''}" data-k="${c.k}">${c.t}${S.sort.k===c.k?`<span class="ar">${S.sort.d<0?'▼':'▲'}</span>`:''}</th>`).join('')+'</tr>';
   $$('#thead th').forEach(th=>{const c=COLS.find(c=>c.k===th.dataset.k);if(c.nosort)return;
     th.onclick=()=>{S.sort={k:c.k,d:S.sort.k===c.k?-S.sort.d:(c.l?1:-1)};renderTable()}});
@@ -621,6 +653,45 @@ function nlist(arr,withName){
   return '<ul class="plist">'+arr.map(n=>`<li><span style="min-width:0;overflow:hidden"><a href="${esc(n.link)||'#'}" target="_blank" rel="noopener">${esc(n.title)}</a>
     <div class="ml">${withName?`<b>${esc(n.item)}</b> · `:''}${esc(n.desc||'')}</div></span><span class="pr" style="font-weight:400;color:var(--muted)">${ago(n.date)}</span></li>`).join('')+'</ul>';
 }
+const enc=encodeURIComponent;
+function refLinks(kw){
+  const q=enc(kw), L=[
+    ['쿠팡','#e4352b','판매량순',`https://www.coupang.com/np/search?q=${q}&sorter=saleCountDesc`],
+    ['쿠팡','#e4352b','낮은가격순',`https://www.coupang.com/np/search?q=${q}&sorter=salePriceAsc`],
+    ['네이버','#03a94d','랭킹순',`https://search.shopping.naver.com/search/all?query=${q}`],
+    ['네이버','#03a94d','낮은가격순',`https://search.shopping.naver.com/search/all?query=${q}&sort=price_asc`],
+    ['네이버','#03a94d','리뷰많은순',`https://search.shopping.naver.com/search/all?query=${q}&sort=review`],
+    ['다나와','#1b62d8','가격비교',`https://search.danawa.com/dsearch.php?query=${q}`]];
+  return `<div class="refs">${L.map(([m,c,t,u])=>`<a href="${u}" target="_blank" rel="noopener"><i style="background:${c}">${m}</i>${t} ↗</a>`).join('')}</div>`;
+}
+function prodSrc(it){
+  if(it.coupang?.top?.length)return {d:it.coupang,name:'쿠팡',rk:'쿠팡 랭킹순(판매실적·리뷰 등 반영)'};
+  if(it.naver?.top?.length&&it.naver.top[0].rank)return {d:it.naver,name:'네이버쇼핑',rk:'네이버쇼핑 랭킹순'};
+  return null;
+}
+function productBox(it){
+  const src=prodSrc(it), head=`<h4>인기 상품 TOP 10 · 최저가/평균 판매가 분석 — "${esc(it.keyword)}"</h4>`;
+  if(!src)return `<div class="box full">${head}<p class="note" style="margin:0">상품 순위·가격 데이터는 <b>쿠팡 파트너스 API</b> 키를 등록하면 3일마다 자동으로 채워집니다. (네이버 쇼핑 검색 API는 2026년 7월 31일 종료되었습니다.) 그 전까지는 아래 링크에서 실시간 판매량순·최저가순 목록을 바로 확인하세요.</p>${refLinks(it.keyword)}</div>`;
+  const d=src.d, lo=d.real_min_item||d.min_item, top=d.top.slice(0,10);
+  const loLink=lo?.link?`<a class="golink" href="${esc(lo.link)}" target="_blank" rel="noopener">최저가 상품 보기 ↗</a>`:'';
+  const spread=d.real_min&&d.max?Math.round((d.avg-d.real_min)/d.avg*100):null;
+  return `<div class="box full">${head}
+    <div class="pstats">
+      <div class="pst lo"><div class="l">실질 최저가</div><div class="v">${won(d.real_min??d.min)}</div><div class="s" title="${esc(lo?.title)}">${lo?`${lo.rank}위 · ${esc(lo.title)}`:''}</div>${loLink}</div>
+      <div class="pst"><div class="l">평균 판매가 (TOP ${top.length})</div><div class="v">${won(d.avg)}</div><div class="s">최저가는 평균보다 ${spread??'–'}% 저렴</div></div>
+      <div class="pst"><div class="l">중앙값</div><div class="v">${won(d.median)}</div><div class="s">가격대 중심</div></div>
+      <div class="pst"><div class="l">최고가</div><div class="v">${won(d.max)}</div><div class="s">가격 범위 ${won(d.real_min??d.min)} ~ ${won(d.max)}</div></div>
+    </div>
+    ${d.min_item&&d.min!==d.real_min?`<p class="note" style="margin:0 0 10px;color:var(--muted)">※ 표시상 최저가 ${won(d.min)}(<a href="${esc(d.min_item.link)}" target="_blank" rel="noopener">${esc(d.min_item.title.slice(0,30))}…</a>)는 중앙값의 35% 미만이라 부속품·소량 구성으로 보고 실질 최저가·평균에서 제외했습니다.</p>`:''}
+    <div class="ptable"><table><thead><tr><th>순위</th><th class="l">상품</th><th>판매가</th><th>평균 대비</th><th class="l">구분</th></tr></thead><tbody>
+    ${top.map(p=>{const isLo=lo&&p.rank===lo.rank;return `<tr class="${isLo?'lo':''} ${p.suspect?'sus':''}"><td><b>${p.rank}</b></td>
+      <td class="l"><div class="pn">${p.image?`<img src="${esc(p.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}<a href="${esc(p.link)||'#'}" target="_blank" rel="noopener">${esc(p.title)}</a></div></td>
+      <td><b>${won(p.price)}</b></td><td>${p.vs_avg==null?'–':`<span class="${p.vs_avg<=0?'up':'dn'}">${p.vs_avg>0?'+':''}${p.vs_avg.toFixed(0)}%</span>`}</td>
+      <td class="l">${isLo?'<span class="bdg lo">최저가</span>':''}${p.suspect?'<span class="bdg sus">부속품 의심</span>':''}${p.rocket?'<span class="bdg rk">로켓배송</span>':''}${p.mall&&p.mall!=='쿠팡'?`<span class="bdg rk">${esc(p.mall)}</span>`:''}</td></tr>`}).join('')}
+    </tbody></table></div>
+    <p class="note" style="margin:10px 0 0;color:var(--muted)">순위 기준: ${src.rk} · 판매량 자체는 공개되지 않아 쇼핑몰 랭킹 순서를 구매 인기도로 사용합니다.${d.updated_at?' · 수집 '+fmtDate(d.updated_at):''}</p>
+    ${refLinks(it.keyword)}</div>`;
+}
 function openDetail(id){
   const it=S.data.items.find(x=>x.id===id);if(!it)return;
   if(!inG(it))setGroup('전체',{noScroll:1});
@@ -634,6 +705,7 @@ function openDetail(id){
       <div class="box full"><h4>최근 3년 월별 검색 관심도와 AI 예측 (점선: 예측)</h4><div class="chartbox" style="height:260px"><canvas id="cMonthly"></canvas></div></div>
       ${f?`<div class="box full"><h4>AI 수요 예측 요약</h4><div class="stats">${f.h.map(x=>`<div>${x.h}개월 후 (${mLabel(x.month)})<b class="${x.change>=0?'up':'dn'}">${pc(x.change,0)}</b><span class="conf ${x.conf}">신뢰도 ${x.conf}</span> · 점수 ${x.score}</div>`).join('')}</div>
         <p class="note" style="margin:10px 0 0">${f.h.map(x=>`<b>${mLabel(x.month)}</b>: ${esc(x.reasons.join(', '))}`).join('<br>')}</p></div>`:''}
+      ${productBox(it)}
       <div class="box"><h4>최근 6개월 주간 관심도 (기준 "${esc(S.data.meta.anchor)}" 평균=100)</h4><div class="chartbox"><canvas id="cTrend"></canvas></div></div>
       <div class="box"><h4>관련 최신 뉴스 · 최근 1주 ${it.buzz??'–'}건</h4>${nlist(it.news)}</div>
       ${n?`<div class="box"><h4>네이버 가격 통계 (분석 상품 ${n.n??0}개)</h4><div class="stats">
@@ -641,8 +713,7 @@ function openDetail(id){
         <div>평균가<b>${won(n.avg)}</b></div><div>상위10%<b>${won(n.p90)}</b></div><div>최고가<b>${won(n.max)}</b></div>
         <div>등록 상품<b>${num(n.total)}</b></div><div>판매처 수<b>${num(n.sellers)}</b></div><div>월 검색량<b>${num(it.search?.total)}</b></div></div></div>
       <div class="box"><h4>가격대 분포 (네이버, 이상치 제외)</h4><div class="chartbox"><canvas id="cHist"></canvas></div></div>
-      <div class="box"><h4>네이버 상위 상품</h4>${plist(n.top)}</div>`:''}
-      ${c?`<div class="box"><h4>쿠팡 상위 상품 (평균 ${won(c.avg)}, 로켓 ${c.rocket}%)</h4>${plist(c.top,true)}</div>`:''}
+`:''}
       ${h&&S.hist.dates.length>1&&n?`<div class="box full"><h4>수집 회차별 가격 변화</h4><div class="chartbox"><canvas id="cHist2"></canvas></div></div>`:''}
       <div class="box full note"><h4>소싱 메모</h4>
         <p><b>인증·법규</b> — ${esc(it.cert)}</p><p><b>시장 메모</b> — ${esc(it.memo)}</p>
