@@ -34,9 +34,13 @@ safety-radar/
 
 | Secret 이름 | 발급처 | 필수 여부 | 제공 데이터 |
 |---|---|---|---|
-| `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` | 네이버 개발자센터 → 애플리케이션 등록 (사용 API: **검색**, **데이터랩(검색어트렌드)**) | **필수** | 가격, 상품 수, 상위 상품, 6개월 추세 |
+| `NAVER_HUB_CLIENT_ID`, `NAVER_HUB_CLIENT_SECRET` | 네이버 클라우드 콘솔 → NAVER API HUB → Application 등록 (사용 API: **검색어트렌드**, **뉴스**, **쇼핑인사이트**) → 인증 정보 | **필수** (둘 중 하나 이상) | 6개월 검색 추세, 품목별 최신 뉴스, 분야별 쇼핑 클릭 추이 |
+| `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` | 네이버 개발자센터 → 애플리케이션 등록 (사용 API: **검색**) | 권장 | 가격, 상품 수, 상위 상품 (API HUB에는 쇼핑 상품 검색이 없음) |
 | `NAVER_AD_API_KEY`, `NAVER_AD_SECRET_KEY`, `NAVER_AD_CUSTOMER_ID` | 네이버 검색광고 → 도구 → API 사용 관리 | 권장 | 월간 검색량, 인기점수, 경쟁강도 |
 | `COUPANG_ACCESS_KEY`, `COUPANG_SECRET_KEY` | 쿠팡 파트너스 → 추가기능 → Open API (승인 조건 있음) | 선택 | 쿠팡 가격, 로켓배송 비율 |
+
+> NAVER API HUB 키는 개발자센터 키와 서로 호환되지 않습니다. 반드시 위 이름 그대로 따로 등록하세요.
+> 쇼핑인사이트는 `collector/keywords.json`의 `shop_categories`에 네이버 쇼핑 카테고리 코드(cat_id)를 넣어야 수집됩니다.
 
 등록이 끝나면 **Actions 탭 → 데이터 자동 업데이트 → Run workflow**를 눌러 첫 수집을 실행합니다. 2~3분 뒤 실제 데이터로 바뀝니다.
 
