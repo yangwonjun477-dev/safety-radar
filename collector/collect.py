@@ -4,6 +4,9 @@
 
 - 네이버 검색 API(쇼핑)      : 가격(최저/평균/중앙값/분포), 등록 상품 수, 판매처 수, 상위 상품
 - 네이버 데이터랩(검색어 트렌드): 6개월 주간 관심도 추이, 상승률 (기준 키워드로 품목 간 비교 가능하게 보정)
+- NAVER API HUB (네이버 클라우드) : 검색어트렌드, 뉴스 검색, 쇼핑인사이트(분야별 클릭 추이)
+  → NAVER_HUB_CLIENT_ID / NAVER_HUB_CLIENT_SECRET 이 있으면 검색어트렌드는 API HUB로 호출합니다.
+  → API HUB에는 쇼핑(상품) 검색이 없어서 가격 데이터는 네이버 개발자센터 키(NAVER_CLIENT_ID/SECRET)로만 수집됩니다.
 - 네이버 검색광고 API (선택)  : 월간 검색량(PC+모바일), 광고 경쟁정도
 - 쿠팡 파트너스 API (선택)    : 쿠팡 상위 상품 가격, 로켓배송 비율 (호출 제한 때문에 실행마다 일부 품목씩 순환)
 
@@ -12,6 +15,7 @@
 """
 import base64
 import datetime as dt
+import html
 import hashlib
 import hmac
 import json
@@ -37,6 +41,23 @@ KST = dt.timezone(dt.timedelta(hours=9))
 INTERVAL_HOURS = float(os.getenv("INTERVAL_HOURS", "70"))  # 3일 주기 (매일 체크, 70시간 지나면 수집)
 COUPANG_MAX = int(os.getenv("COUPANG_MAX_PER_RUN", "10"))  # 쿠팡 검색 API는 시간당 호출 제한이 엄격함
 HISTORY_KEEP = 120
+NEWS_PER_ITEM = int(os.getenv("NEWS_PER_ITEM", "5"))
+
+DEV_BASE = "https://openapi.naver.com"
+HUB_BASE = "https://naverapihub.apigw.ntruss.com"
+DATALAB_URL = {"dev": DEV_BASE + "/v1/datalab/search", "hub": HUB_BASE + "/search-trend/v1/search"}
+
+
+def dev_headers(cid, csec):
+    return {"X-Naver-Client-Id": cid, "X-Naver-Client-Secret": csec}
+
+
+def hub_headers(cid, csec):
+    return {"X-NCP-APIGW-API-KEY-ID": cid, "X-NCP-APIGW-API-KEY": csec}
+
+
+def clean(text):
+    return html.unescape(re.sub(r"<[^>]+>", "", text or "")).strip()
 
 
 def env(key):
@@ -127,8 +148,7 @@ def mean(xs):
 
 
 # ---------------------------------------------------------------- 네이버 쇼핑
-def naver_shop(item, cid, csec):
-    headers = {"X-Naver-Client-Id": cid, "X-Naver-Client-Secret": csec}
+def naver_shop(item, headers):
     excl = [w.lower() for w in item.get("exclude", []) if w]
     prods, total = [], 0
     for start in (1, 101):
@@ -136,7 +156,7 @@ def naver_shop(item, cid, csec):
             "query": item["keyword"], "display": 100, "start": start,
             "sort": "sim", "exclude": "used:rental:cbshop",
         })
-        r = request("https://openapi.naver.com/v1/search/shop.json?" + q, headers)
+        r = request(DEV_BASE + "/v1/search/shop.json?" + q, headers)
         total = r.get("total", total)
         for it in r.get("items", []):
             title = re.sub(r"<[^>]+>", "", it.get("title", ""))
@@ -171,9 +191,8 @@ def naver_shop(item, cid, csec):
 
 
 # ---------------------------------------------------------------- 네이버 데이터랩
-def datalab(keywords, anchor, cid, csec):
+def datalab(keywords, anchor, url, headers):
     """기준(anchor) 키워드를 매 요청에 함께 넣어 요청 간 비율을 보정 → 품목 간 관심도 비교 가능"""
-    headers = {"X-Naver-Client-Id": cid, "X-Naver-Client-Secret": csec}
     end = dt.date.today() - dt.timedelta(days=1)
     start = end - dt.timedelta(weeks=26)
     others = [k for k in dict.fromkeys(keywords) if k != anchor]
@@ -184,7 +203,7 @@ def datalab(keywords, anchor, cid, csec):
             "startDate": start.isoformat(), "endDate": end.isoformat(), "timeUnit": "week",
             "keywordGroups": [{"groupName": k, "keywords": [k]} for k in batch],
         }
-        r = request("https://openapi.naver.com/v1/datalab/search", headers, body)
+        r = request(url, headers, body)
         res = {g["title"]: g.get("data", []) for g in r.get("results", [])}
         a_mean = mean([d["ratio"] for d in res.get(anchor, [])]) or 1
         for k in batch:
@@ -199,6 +218,41 @@ def datalab(keywords, anchor, cid, csec):
                 "growth": round((last4 / prev4 - 1) * 100, 1) if last4 is not None and prev4 else None,
                 "series": series,
             }
+        time.sleep(0.2)
+    return out
+
+
+# ---------------------------------------------------------------- NAVER API HUB: 뉴스 / 쇼핑인사이트
+def hub_news(keyword, headers, n=NEWS_PER_ITEM):
+    q = urllib.parse.urlencode({"query": keyword, "display": n, "start": 1, "sort": "date"})
+    r = request(f"{HUB_BASE}/search/v1/news?{q}", headers)
+    out = []
+    for it in r.get("items", [])[:n]:
+        try:
+            date = dt.datetime.strptime(it.get("pubDate", ""), "%a, %d %b %Y %H:%M:%S %z").astimezone(KST).isoformat(timespec="minutes")
+        except ValueError:
+            date = None
+        out.append({"title": clean(it.get("title")), "desc": clean(it.get("description"))[:140],
+                    "link": it.get("originallink") or it.get("link", ""), "date": date})
+    return out
+
+
+def shop_insight(categories, headers):
+    """쇼핑인사이트 분야별 클릭 추이 (최근 6개월, 주간). 요청당 최대 3개 분야, 요청마다 최댓값=100 기준."""
+    end = dt.date.today() - dt.timedelta(days=1)
+    start = end - dt.timedelta(weeks=26)
+    out = []
+    for i in range(0, len(categories), 3):
+        batch = categories[i:i + 3]
+        body = {"startDate": start.isoformat(), "endDate": end.isoformat(), "timeUnit": "week",
+                "category": [{"name": c["name"], "param": [str(c["code"])]} for c in batch]}
+        r = request(f"{HUB_BASE}/shopping/v1/categories", headers, body)
+        for g in r.get("results", []):
+            series = [{"p": d["period"], "r": round(d["ratio"], 1)} for d in g.get("data", [])]
+            vals = [s["r"] for s in series]
+            last4, prev4 = mean(vals[-4:]), mean(vals[-8:-4])
+            out.append({"name": g.get("title"), "series": series,
+                        "growth": round((last4 / prev4 - 1) * 100, 1) if last4 is not None and prev4 else None})
         time.sleep(0.2)
     return out
 
@@ -297,27 +351,46 @@ def main():
             log(f"마지막 수집 후 {hours:.1f}시간 경과 — {INTERVAL_HOURS:.0f}시간 주기가 아니므로 건너뜁니다.")
             return 0
 
-    cid, csec = env("NAVER_CLIENT_ID"), env("NAVER_CLIENT_SECRET")
-    if not (cid and csec):
-        log("::warning::NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 이 등록되지 않아 수집을 건너뜁니다. (샘플 데이터 유지)")
+    cid, csec = env("NAVER_CLIENT_ID"), env("NAVER_CLIENT_SECRET")        # 네이버 개발자센터 (쇼핑 검색 가격)
+    hid, hsec = env("NAVER_HUB_CLIENT_ID"), env("NAVER_HUB_CLIENT_SECRET")  # NAVER API HUB (트렌드·뉴스·쇼핑인사이트)
+    dev = dev_headers(cid, csec) if cid and csec else None
+    hub = hub_headers(hid, hsec) if hid and hsec else None
+    if not (dev or hub):
+        log("::warning::네이버 API 키(NAVER_HUB_CLIENT_ID/SECRET 또는 NAVER_CLIENT_ID/SECRET)가 없어 수집을 건너뜁니다. (샘플 데이터 유지)")
         return 0
+    log(f"키 확인: API HUB {'O' if hub else 'X'} / 개발자센터(쇼핑 가격) {'O' if dev else 'X'}")
 
     cfg = load_json(CONFIG)
     conf_items = cfg["items"]
     anchor = cfg.get("anchor") or conf_items[0]["keyword"]
     prev_items = {} if is_sample or not prev else {it["id"]: it for it in prev.get("items", [])}
     keywords = [c["keyword"] for c in conf_items]
-    sources = {"naver_shop": False, "datalab": False, "searchad": False, "coupang": False}
+    sources = {"naver_shop": False, "datalab": False, "searchad": False, "coupang": False,
+               "news": False, "shop_insight": False}
     errors = []
 
-    # 1) 데이터랩
+    # 1) 검색어 트렌드 (API HUB 우선, 실패하면 개발자센터 데이터랩)
     trends = {}
-    try:
-        trends = datalab(keywords, anchor, cid, csec)
-        sources["datalab"] = True
-        log(f"데이터랩: {len(trends)}개 키워드")
-    except Exception as e:
-        errors.append(f"데이터랩: {e}")
+    for kind, headers in (("hub", hub), ("dev", dev)):
+        if not headers or trends:
+            continue
+        try:
+            trends = datalab(keywords, anchor, DATALAB_URL[kind], headers)
+            sources["datalab"] = True
+            log(f"검색어트렌드({'API HUB' if kind == 'hub' else '개발자센터'}): {len(trends)}개 키워드")
+        except Exception as e:
+            errors.append(f"검색어트렌드({kind}): {e}")
+
+    # 1-2) 쇼핑인사이트 (keywords.json 의 shop_categories 에 카테고리 코드를 넣은 경우만)
+    insight = (prev or {}).get("meta", {}).get("shop_insight") if not is_sample else None
+    cats = [c for c in cfg.get("shop_categories", []) if str(c.get("code", "")).strip()]
+    if hub and cats:
+        try:
+            insight = shop_insight(cats, hub)
+            sources["shop_insight"] = True
+            log(f"쇼핑인사이트: {len(insight)}개 분야")
+        except Exception as e:
+            errors.append(f"쇼핑인사이트: {e}")
 
     # 2) 검색광고
     volumes = {}
@@ -342,12 +415,21 @@ def main():
     for c in conf_items:
         p = prev_items.get(c["id"], {})
         it = {k: c.get(k) for k in ("id", "group", "sub", "name", "keyword", "cert", "memo")}
-        try:
-            it["naver"] = naver_shop(c, cid, csec) or p.get("naver")
-            sources["naver_shop"] = True
-        except Exception as e:
-            errors.append(f"쇼핑 {c['name']}: {e}")
-            it["naver"] = p.get("naver")
+        it["naver"] = p.get("naver")
+        if dev:
+            try:
+                it["naver"] = naver_shop(c, dev) or p.get("naver")
+                sources["naver_shop"] = True
+            except Exception as e:
+                errors.append(f"쇼핑 {c['name']}: {e}")
+        it["news"] = p.get("news")
+        if hub:
+            try:
+                it["news"] = hub_news(c["keyword"], hub)
+                sources["news"] = True
+            except Exception as e:
+                errors.append(f"뉴스 {c['name']}: {e}")
+            time.sleep(0.1)
         it["trend"] = trends.get(c["keyword"]) or p.get("trend")
         it["search"] = volumes.get(c["keyword"]) or p.get("search")
         it["coupang"] = p.get("coupang")
@@ -360,8 +442,11 @@ def main():
         items.append(it)
         log(f"  ✓ {c['name']}")
 
-    if not sources["naver_shop"]:
+    if dev and not sources["naver_shop"] and not hub:
         log("::error::네이버 쇼핑 수집이 전부 실패했습니다. 키를 확인하세요.\n" + "\n".join(errors[:5]))
+        return 1
+    if not any(sources.values()):
+        log("::error::모든 API 호출이 실패했습니다. Secrets에 등록한 키와 API HUB Application의 API 선택을 확인하세요.\n" + "\n".join(errors[:5]))
         return 1
 
     score_items(items)
@@ -370,6 +455,7 @@ def main():
             "updated_at": now.isoformat(timespec="seconds"),
             "next_update": (now + dt.timedelta(hours=72)).isoformat(timespec="seconds"),
             "sample": False, "anchor": anchor, "sources": sources, "errors": errors[:20],
+            "shop_insight": insight,
         },
         "items": items,
     }
