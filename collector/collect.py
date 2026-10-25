@@ -1,0 +1,406 @@
+#!/usr/bin/env python3
+"""
+안전·소방·보건·환경 용품 시장 데이터 수집기
+
+- 네이버 검색 API(쇼핑)      : 가격(최저/평균/중앙값/분포), 등록 상품 수, 판매처 수, 상위 상품
+- 네이버 데이터랩(검색어 트렌드): 6개월 주간 관심도 추이, 상승률 (기준 키워드로 품목 간 비교 가능하게 보정)
+- 네이버 검색광고 API (선택)  : 월간 검색량(PC+모바일), 광고 경쟁정도
+- 쿠팡 파트너스 API (선택)    : 쿠팡 상위 상품 가격, 로켓배송 비율 (호출 제한 때문에 실행마다 일부 품목씩 순환)
+
+키는 모두 환경변수(GitHub Secrets)로 받습니다. 없는 API는 건너뜁니다.
+외부 라이브러리 없이 파이썬 표준 라이브러리만 사용합니다.
+"""
+import base64
+import datetime as dt
+import hashlib
+import hmac
+import json
+import math
+import os
+import re
+import statistics
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from collections import Counter
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+CONFIG = ROOT / "collector" / "keywords.json"
+DATA_DIR = ROOT / "docs" / "data"
+LATEST = DATA_DIR / "latest.json"
+HISTORY = DATA_DIR / "history.json"
+KST = dt.timezone(dt.timedelta(hours=9))
+
+INTERVAL_HOURS = float(os.getenv("INTERVAL_HOURS", "70"))  # 3일 주기 (매일 체크, 70시간 지나면 수집)
+COUPANG_MAX = int(os.getenv("COUPANG_MAX_PER_RUN", "10"))  # 쿠팡 검색 API는 시간당 호출 제한이 엄격함
+HISTORY_KEEP = 120
+
+
+def env(key):
+    v = os.getenv(key, "").strip()
+    return v or None
+
+
+def log(*a):
+    print(*a, flush=True)
+
+
+def load_json(path):
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def save_json(path, obj):
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    Path(path).write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+
+
+def request(url, headers=None, data=None, retries=3):
+    body = json.dumps(data).encode("utf-8") if data is not None else None
+    h = dict(headers or {})
+    if body is not None:
+        h["Content-Type"] = "application/json"
+    for i in range(retries):
+        req = urllib.request.Request(url, data=body, headers=h, method="POST" if body is not None else "GET")
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            msg = e.read().decode("utf-8", "ignore")[:300]
+            if e.code in (429, 500, 502, 503, 504) and i < retries - 1:
+                time.sleep((i + 1) * (10 if e.code == 429 else 2))
+                continue
+            raise RuntimeError(f"HTTP {e.code}: {msg}")
+        except urllib.error.URLError:
+            if i < retries - 1:
+                time.sleep(2)
+                continue
+            raise
+
+
+# ---------------------------------------------------------------- 통계
+def pct(v, q):
+    if not v:
+        return None
+    k = (len(v) - 1) * q
+    f, c = math.floor(k), math.ceil(k)
+    return v[f] + (v[c] - v[f]) * (k - f)
+
+
+def histogram(vals, bins=10):
+    lo, hi = min(vals), max(vals)
+    if hi == lo:
+        return {"edges": [lo, hi], "counts": [len(vals)]}
+    w = (hi - lo) / bins
+    counts = [0] * bins
+    for x in vals:
+        counts[min(int((x - lo) / w), bins - 1)] += 1
+    return {"edges": [round(lo + w * i) for i in range(bins + 1)], "counts": counts}
+
+
+def price_stats(prices):
+    v = sorted(p for p in prices if p and p > 0)
+    if not v:
+        return None
+    lo, hi = pct(v, 0.05), pct(v, 0.95)
+    trimmed = [p for p in v if lo <= p <= hi] or v  # 평균·분포는 상하위 5% 이상치(부속품·대량세트) 제외
+    return {
+        "n": len(v),
+        "min": v[0],
+        "p10": round(pct(v, 0.10)),
+        "median": round(statistics.median(v)),
+        "avg": round(statistics.mean(trimmed)),
+        "p90": round(pct(v, 0.90)),
+        "max": v[-1],
+        "hist": histogram(trimmed),
+    }
+
+
+def mean(xs):
+    xs = [x for x in xs if x is not None]
+    return sum(xs) / len(xs) if xs else None
+
+
+# ---------------------------------------------------------------- 네이버 쇼핑
+def naver_shop(item, cid, csec):
+    headers = {"X-Naver-Client-Id": cid, "X-Naver-Client-Secret": csec}
+    excl = [w.lower() for w in item.get("exclude", []) if w]
+    prods, total = [], 0
+    for start in (1, 101):
+        q = urllib.parse.urlencode({
+            "query": item["keyword"], "display": 100, "start": start,
+            "sort": "sim", "exclude": "used:rental:cbshop",
+        })
+        r = request("https://openapi.naver.com/v1/search/shop.json?" + q, headers)
+        total = r.get("total", total)
+        for it in r.get("items", []):
+            title = re.sub(r"<[^>]+>", "", it.get("title", ""))
+            if any(w in title.lower() for w in excl):
+                continue
+            if str(it.get("productType", "1")) not in ("1", "2", "3"):  # 일반상품만 (중고/단종/판매예정 제외)
+                continue
+            try:
+                price = int(it.get("lprice") or 0)
+            except ValueError:
+                price = 0
+            if price <= 0:
+                continue
+            cats = [it.get(f"category{i}") for i in range(1, 5) if it.get(f"category{i}")]
+            prods.append({
+                "title": title, "price": price, "mall": it.get("mallName", ""),
+                "brand": it.get("brand", ""), "link": it.get("link", ""),
+                "image": it.get("image", ""), "cat": " > ".join(cats),
+            })
+        time.sleep(0.15)
+    if not prods:
+        return None
+    stats = price_stats([p["price"] for p in prods])
+    cat_top = Counter(p["cat"] for p in prods if p["cat"]).most_common(3)
+    return {
+        **stats,
+        "total": total,
+        "sellers": len({p["mall"] for p in prods if p["mall"]}),
+        "categories": [{"path": c, "share": round(n / len(prods) * 100)} for c, n in cat_top],
+        "top": [{k: p[k] for k in ("title", "price", "mall", "link", "image")} for p in prods[:10]],
+    }
+
+
+# ---------------------------------------------------------------- 네이버 데이터랩
+def datalab(keywords, anchor, cid, csec):
+    """기준(anchor) 키워드를 매 요청에 함께 넣어 요청 간 비율을 보정 → 품목 간 관심도 비교 가능"""
+    headers = {"X-Naver-Client-Id": cid, "X-Naver-Client-Secret": csec}
+    end = dt.date.today() - dt.timedelta(days=1)
+    start = end - dt.timedelta(weeks=26)
+    others = [k for k in dict.fromkeys(keywords) if k != anchor]
+    out = {}
+    for i in range(0, max(len(others), 1), 4):
+        batch = [anchor] + others[i:i + 4]
+        body = {
+            "startDate": start.isoformat(), "endDate": end.isoformat(), "timeUnit": "week",
+            "keywordGroups": [{"groupName": k, "keywords": [k]} for k in batch],
+        }
+        r = request("https://openapi.naver.com/v1/datalab/search", headers, body)
+        res = {g["title"]: g.get("data", []) for g in r.get("results", [])}
+        a_mean = mean([d["ratio"] for d in res.get(anchor, [])]) or 1
+        for k in batch:
+            if k == anchor and k in out:
+                continue
+            data = res.get(k, [])
+            series = [{"p": d["period"], "r": round(d["ratio"] * 100 / a_mean, 1)} for d in data]
+            vals = [s["r"] for s in series]
+            last4, prev4 = mean(vals[-4:]), mean(vals[-8:-4])
+            out[k] = {
+                "rel": round(mean(vals) or 0, 1),  # 기준 키워드 평균 = 100
+                "growth": round((last4 / prev4 - 1) * 100, 1) if last4 is not None and prev4 else None,
+                "series": series,
+            }
+        time.sleep(0.2)
+    return out
+
+
+# ---------------------------------------------------------------- 네이버 검색광고 (월간 검색량)
+def _num(v):
+    if isinstance(v, (int, float)):
+        return int(v)
+    return 5 if "<" in str(v) else int(re.sub(r"\D", "", str(v)) or 0)
+
+
+def searchad(keywords, key, secret, customer):
+    out = {}
+    uniq = list(dict.fromkeys(keywords))
+    for i in range(0, len(uniq), 5):
+        batch = uniq[i:i + 5]
+        uri = "/keywordstool"
+        ts = str(int(time.time() * 1000))
+        sig = base64.b64encode(hmac.new(secret.encode(), f"{ts}.GET.{uri}".encode(), hashlib.sha256).digest()).decode()
+        q = urllib.parse.urlencode({"hintKeywords": ",".join(k.replace(" ", "") for k in batch), "showDetail": 1})
+        r = request(f"https://api.searchad.naver.com{uri}?{q}",
+                    {"X-Timestamp": ts, "X-API-KEY": key, "X-Customer": str(customer), "X-Signature": sig})
+        lst = {x["relKeyword"].upper(): x for x in r.get("keywordList", [])}
+        for k in batch:
+            x = lst.get(k.replace(" ", "").upper())
+            if x:
+                pc, mo = _num(x.get("monthlyPcQcCnt")), _num(x.get("monthlyMobileQcCnt"))
+                out[k] = {"pc": pc, "mobile": mo, "total": pc + mo, "adComp": x.get("compIdx")}
+        time.sleep(0.3)
+    return out
+
+
+# ---------------------------------------------------------------- 쿠팡 파트너스
+def coupang(keyword, ak, sk):
+    path = "/v2/providers/affiliate_open_api/apis/openapi/products/search"
+    query = urllib.parse.urlencode({"keyword": keyword, "limit": 10})
+    signed = time.strftime("%y%m%dT%H%M%SZ", time.gmtime())
+    sig = hmac.new(sk.encode(), (signed + "GET" + path + query).encode(), hashlib.sha256).hexdigest()
+    auth = f"CEA algorithm=HmacSHA256, access-key={ak}, signed-date={signed}, signature={sig}"
+    r = request(f"https://api-gateway.coupang.com{path}?{query}", {"Authorization": auth})
+    data = r.get("data") or {}
+    prods = data.get("productData", []) if isinstance(data, dict) else []
+    prices = [int(p.get("productPrice") or 0) for p in prods]
+    stats = price_stats(prices)
+    if not stats:
+        return None
+    return {
+        "n": stats["n"], "min": stats["min"], "median": stats["median"],
+        "avg": round(mean([p for p in prices if p > 0])), "max": stats["max"],
+        "rocket": round(sum(1 for p in prods if p.get("isRocket")) / len(prods) * 100),
+        "top": [{"title": p.get("productName", ""), "price": int(p.get("productPrice") or 0),
+                 "rocket": bool(p.get("isRocket")), "link": p.get("productUrl", ""),
+                 "image": p.get("productImage", "")} for p in prods[:10]],
+        "updated_at": dt.datetime.now(KST).isoformat(timespec="seconds"),
+    }
+
+
+# ---------------------------------------------------------------- 점수
+def norm(vals):
+    xs = [v for v in vals if v is not None]
+    if not xs:
+        return [None] * len(vals)
+    lo, hi = min(xs), max(xs)
+    return [None if v is None else (0.5 if hi == lo else (v - lo) / (hi - lo)) for v in vals]
+
+
+def score_items(items):
+    vol = [math.log10(it["search"]["total"] + 1) if it.get("search") else None for it in items]
+    rel = [math.log10(it["trend"]["rel"] + 1) if it.get("trend") else None for it in items]
+    nv, nr = norm(vol), norm(rel)
+    for it, a, b in zip(items, nv, nr):
+        parts = [(a, 0.6), (b, 0.4)]
+        parts = [(x, w) for x, w in parts if x is not None]
+        it["score"] = round(100 * sum(x * w for x, w in parts) / sum(w for _, w in parts)) if parts else None
+        # 경쟁강도 = 등록 상품 수 ÷ 월간 검색량 (낮을수록 수요 대비 공급이 적음)
+        s, n = it.get("search"), it.get("naver")
+        if s and n and s["total"] > 0:
+            ratio = n["total"] / s["total"]
+            it["competition"] = {"ratio": round(ratio, 1),
+                                 "level": "낮음" if ratio < 3 else ("보통" if ratio < 15 else "높음")}
+        else:
+            it["competition"] = None
+
+
+# ---------------------------------------------------------------- 메인
+def main():
+    now = dt.datetime.now(KST)
+    force = os.getenv("FORCE", "").lower() in ("true", "1", "yes")
+    prev = load_json(LATEST)
+    is_sample = bool(prev and prev.get("meta", {}).get("sample"))
+
+    if prev and not is_sample and not force:
+        last = dt.datetime.fromisoformat(prev["meta"]["updated_at"])
+        hours = (now - last).total_seconds() / 3600
+        if hours < INTERVAL_HOURS:
+            log(f"마지막 수집 후 {hours:.1f}시간 경과 — {INTERVAL_HOURS:.0f}시간 주기가 아니므로 건너뜁니다.")
+            return 0
+
+    cid, csec = env("NAVER_CLIENT_ID"), env("NAVER_CLIENT_SECRET")
+    if not (cid and csec):
+        log("::warning::NAVER_CLIENT_ID / NAVER_CLIENT_SECRET 이 등록되지 않아 수집을 건너뜁니다. (샘플 데이터 유지)")
+        return 0
+
+    cfg = load_json(CONFIG)
+    conf_items = cfg["items"]
+    anchor = cfg.get("anchor") or conf_items[0]["keyword"]
+    prev_items = {} if is_sample or not prev else {it["id"]: it for it in prev.get("items", [])}
+    keywords = [c["keyword"] for c in conf_items]
+    sources = {"naver_shop": False, "datalab": False, "searchad": False, "coupang": False}
+    errors = []
+
+    # 1) 데이터랩
+    trends = {}
+    try:
+        trends = datalab(keywords, anchor, cid, csec)
+        sources["datalab"] = True
+        log(f"데이터랩: {len(trends)}개 키워드")
+    except Exception as e:
+        errors.append(f"데이터랩: {e}")
+
+    # 2) 검색광고
+    volumes = {}
+    sk, ss, sc = env("NAVER_AD_API_KEY"), env("NAVER_AD_SECRET_KEY"), env("NAVER_AD_CUSTOMER_ID")
+    if sk and ss and sc:
+        try:
+            volumes = searchad(keywords, sk, ss, sc)
+            sources["searchad"] = True
+            log(f"검색광고: {len(volumes)}개 키워드")
+        except Exception as e:
+            errors.append(f"검색광고: {e}")
+
+    # 3) 쿠팡 대상 선정 (가장 오래된 것부터 COUPANG_MAX개)
+    ca, cs = env("COUPANG_ACCESS_KEY"), env("COUPANG_SECRET_KEY")
+    coupang_targets = set()
+    if ca and cs:
+        order = sorted(conf_items, key=lambda c: ((prev_items.get(c["id"]) or {}).get("coupang") or {}).get("updated_at", ""))
+        coupang_targets = {c["id"] for c in order[:COUPANG_MAX]}
+
+    # 4) 품목별 수집
+    items = []
+    for c in conf_items:
+        p = prev_items.get(c["id"], {})
+        it = {k: c.get(k) for k in ("id", "group", "sub", "name", "keyword", "cert", "memo")}
+        try:
+            it["naver"] = naver_shop(c, cid, csec) or p.get("naver")
+            sources["naver_shop"] = True
+        except Exception as e:
+            errors.append(f"쇼핑 {c['name']}: {e}")
+            it["naver"] = p.get("naver")
+        it["trend"] = trends.get(c["keyword"]) or p.get("trend")
+        it["search"] = volumes.get(c["keyword"]) or p.get("search")
+        it["coupang"] = p.get("coupang")
+        if c["id"] in coupang_targets:
+            try:
+                it["coupang"] = coupang(c["keyword"], ca, cs) or it["coupang"]
+                sources["coupang"] = True
+            except Exception as e:
+                errors.append(f"쿠팡 {c['name']}: {e}")
+        items.append(it)
+        log(f"  ✓ {c['name']}")
+
+    if not sources["naver_shop"]:
+        log("::error::네이버 쇼핑 수집이 전부 실패했습니다. 키를 확인하세요.\n" + "\n".join(errors[:5]))
+        return 1
+
+    score_items(items)
+    latest = {
+        "meta": {
+            "updated_at": now.isoformat(timespec="seconds"),
+            "next_update": (now + dt.timedelta(hours=72)).isoformat(timespec="seconds"),
+            "sample": False, "anchor": anchor, "sources": sources, "errors": errors[:20],
+        },
+        "items": items,
+    }
+    save_json(LATEST, latest)
+
+    # 5) 이력 누적
+    hist = load_json(HISTORY)
+    if not hist or hist.get("sample"):
+        hist = {"sample": False, "dates": [], "items": {}}
+    hist["dates"].append(now.date().isoformat())
+    for it in items:
+        h = hist["items"].setdefault(it["id"], {"min": [], "avg": [], "median": [], "score": [], "cp_avg": []})
+        pad = len(hist["dates"]) - 1 - len(h["avg"])
+        for key in h:
+            h[key].extend([None] * pad)
+        n, cp = it.get("naver") or {}, it.get("coupang") or {}
+        h["min"].append(n.get("min")); h["avg"].append(n.get("avg")); h["median"].append(n.get("median"))
+        h["score"].append(it.get("score")); h["cp_avg"].append(cp.get("avg"))
+    if len(hist["dates"]) > HISTORY_KEEP:
+        cut = len(hist["dates"]) - HISTORY_KEEP
+        hist["dates"] = hist["dates"][cut:]
+        for h in hist["items"].values():
+            for key in h:
+                h[key] = h[key][cut:]
+    save_json(HISTORY, hist)
+
+    log(f"완료: {len(items)}개 품목, 소스 {sources}")
+    if errors:
+        log("경고:\n  " + "\n  ".join(errors[:20]))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
