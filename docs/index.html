@@ -115,6 +115,12 @@ footer{color:var(--muted);font-size:12.5px;padding:24px 0 40px;line-height:1.7}
 
   <section><h2>분야별 요약</h2><div class="groups" id="groups"></div></section>
 
+  <section id="insight" style="display:none"><h2>쇼핑인사이트 분야별 클릭 추이 <span class="sub" style="font-weight:400">— 네이버 쇼핑 클릭량 상대지수 (최근 6개월)</span></h2>
+    <div class="card" style="padding:16px"><div class="chartbox" style="height:240px"><canvas id="cInsight"></canvas></div></div></section>
+
+  <section id="newsSec" style="display:none"><h2>최근 업계 뉴스 <span class="sub" style="font-weight:400">— 품목 키워드 기준 최신순</span></h2>
+    <div class="card" style="padding:6px 16px" id="newsAll"></div></section>
+
   <section>
     <h2>품목 순위 <span class="sub" style="font-weight:400">— 행을 누르면 상세 분석이 열립니다</span></h2>
     <div class="toolbar" id="toolbar"></div>
@@ -128,7 +134,7 @@ footer{color:var(--muted);font-size:12.5px;padding:24px 0 40px;line-height:1.7}
     · <b>인기점수(0~100)</b>: 네이버 월간 검색량(60%) + 데이터랩 관심도(40%)를 정규화한 상대 점수. 실제 판매량은 공개되지 않으므로 수요를 대신 나타내는 추정치입니다.<br>
     · <b>평균가</b>: 상·하위 5% 이상치(부속품·대량세트)를 제외한 평균. <b>최저가</b>는 원본 최저값이라 부속품이 섞일 수 있으니 <b>하위10%</b> 가격을 실질 진입가로 보세요.<br>
     · <b>경쟁강도</b>: 네이버 등록 상품 수 ÷ 월간 검색량. 3 미만 낮음(진입 기회), 15 이상 높음.<br>
-    · <b>추세</b>: 최근 4주 관심도 ÷ 직전 4주 관심도 변화율.<br>
+    · <b>추세</b>: 최근 4주 관심도 ÷ 직전 4주 관심도 변화율. 검색어트렌드·뉴스·쇼핑인사이트는 NAVER API HUB(네이버 클라우드)로 수집합니다.<br>
     · 쿠팡 데이터는 API 호출 제한 때문에 실행할 때마다 일부 품목씩 순환 갱신됩니다. 인증 정보는 참고용이니 판매 전 최신 법령을 꼭 확인하세요.
     <button class="theme" id="theme">테마 전환</button>
   </footer>
@@ -141,7 +147,13 @@ const num=v=>v==null?'<span class="na">–</span>':Math.round(v).toLocaleString(
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const GROUPS=['안전','소방','보건','환경'];
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const S={data:null,hist:null,group:'전체',q:'',sort:{k:'score',d:-1},sel:null,charts:[]};
+const S={data:null,hist:null,group:'전체',q:'',sort:{k:'score',d:-1},sel:null,charts:[],gcharts:[]};
+const ago=s=>{if(!s)return'';const h=(Date.now()-new Date(s))/36e5;return h<1?'방금':h<24?Math.floor(h)+'시간 전':Math.floor(h/24)+'일 전'};
+function nlist(arr,withName){
+  if(!arr?.length)return '<p class="na">뉴스 없음</p>';
+  return '<ul class="plist">'+arr.map(n=>`<li><span style="min-width:0;overflow:hidden"><a href="${esc(n.link)||'#'}" target="_blank" rel="noopener">${esc(n.title)}</a>
+    <div class="ml">${withName?`<b>${esc(n.item)}</b> · `:''}${esc(n.desc||'')}</div></span><span class="pr" style="font-weight:400;color:var(--muted);white-space:nowrap">${ago(n.date)}</span></li>`).join('')+'</ul>';
+}
 
 const COLS=[
   {k:'rank',t:'#',v:(it,i)=>i+1,nosort:1},
@@ -185,8 +197,9 @@ function render(){
   const {meta,items}=S.data;
   $('#upd').innerHTML=`마지막 업데이트 <b>${fmtDate(meta.updated_at)}</b><br>다음 자동 업데이트 예정 ${fmtDate(meta.next_update)}`;
   $('#banner').innerHTML=meta.sample?`<div class="banner"><strong>샘플 데이터 화면입니다.</strong> 지금 보이는 숫자는 디자인 확인용 가상 데이터예요. API 키를 등록하면 첫 수집 때 실제 네이버·쿠팡 데이터로 자동 교체됩니다.</div>`:
-    (meta.errors?.length?`<div class="banner"><strong>일부 수집 경고 ${meta.errors.length}건</strong> — 이전 데이터를 유지한 항목이 있습니다.</div>`:'');
-  renderKpis();renderGroups();renderToolbar();renderTable();
+    (meta.errors?.length?`<div class="banner"><strong>일부 수집 경고 ${meta.errors.length}건</strong> — 이전 데이터를 유지한 항목이 있습니다.</div>`:'')+
+    (!meta.sample&&!meta.sources?.naver_shop&&!items.some(x=>x.naver)?`<div class="banner"><strong>가격 데이터 미연결</strong> — 지금은 NAVER API HUB로 검색 추세·뉴스만 수집 중이에요. 가격·상품 수는 네이버 개발자센터 쇼핑 검색 키를 등록하면 표시됩니다.</div>`:'');
+  renderKpis();renderGroups();renderToolbar();renderTable();renderNews();renderInsight();
 }
 
 function renderKpis(){
@@ -196,8 +209,8 @@ function renderKpis(){
   const opp=xs.filter(x=>x.competition&&x.score!=null).sort((a,b)=>(b.score/(1+b.competition.ratio))-(a.score/(1+a.competition.ratio)))[0];
   const on=Object.values(src).filter(Boolean).length;
   $('#kpis').innerHTML=[
-    ['추적 품목',xs.length+'개',`${GROUPS.length}개 분야 · 데이터 소스 ${on}/4 연결`],
-    ['인기 1위',top?top.name:'–',top?`인기점수 ${top.score} · 평균 ${Math.round(top.naver?.avg||0).toLocaleString()}원`:''],
+    ['추적 품목',xs.length+'개',`${GROUPS.length}개 분야 · 데이터 소스 ${on}/${Object.keys(src).length||4} 연결`],
+    ['인기 1위',top?top.name:'–',top?`인기점수 ${top.score}`+(top.naver?.avg?` · 평균 ${Math.round(top.naver.avg).toLocaleString()}원`:''):''],
     ['최근 급상승',rise?rise.name:'–',rise?`최근 4주 관심도 ${rise.trend.growth>=0?'+':''}${rise.trend.growth}%`:''],
     ['진입 기회 후보',opp?opp.name:'–',opp?`인기 대비 경쟁 낮음 (경쟁강도 ${opp.competition.level})`:'검색광고 API 연결 시 표시'],
   ].map(([l,v,s])=>`<div class="card kpi"><div class="l">${l}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`).join('');
@@ -235,6 +248,25 @@ function renderTable(){
   document.querySelectorAll('tbody tr[data-id]').forEach(tr=>tr.onclick=()=>openDetail(tr.dataset.id));
 }
 
+function renderNews(){
+  const all=S.data.items.flatMap(it=>(it.news||[]).map(n=>({...n,item:it.name})));
+  const seen=new Set(),xs=all.filter(n=>!seen.has(n.link)&&seen.add(n.link)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,8);
+  $('#newsSec').style.display=xs.length?'block':'none';
+  if(xs.length)$('#newsAll').innerHTML=nlist(xs,true);
+}
+
+function renderInsight(){
+  const ins=S.data.meta.shop_insight;
+  S.gcharts.forEach(c=>c.destroy());S.gcharts=[];
+  $('#insight').style.display=ins?.length?'block':'none';
+  if(!ins?.length||typeof Chart==='undefined')return;
+  const cols=['--g-안전','--g-소방','--g-보건','--g-환경','--accent','--muted'].map(css);
+  S.gcharts.push(new Chart($('#cInsight'),{type:'line',data:{labels:ins[0].series.map(s=>s.p.slice(5)),
+    datasets:ins.map((g,i)=>({label:g.name+(g.growth!=null?` (${g.growth>=0?'+':''}${g.growth}%)`:''),data:g.series.map(s=>s.r),borderColor:cols[i%cols.length],backgroundColor:cols[i%cols.length],tension:.3,pointRadius:0,borderWidth:2}))},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10}}},
+      scales:{x:{grid:{display:false},ticks:{maxTicksLimit:7}},y:{grid:{color:css('--line')},beginAtZero:true}}}}));
+}
+
 function plist(arr,coupang){
   if(!arr?.length)return '<p class="na">데이터 없음</p>';
   return '<ul class="plist">'+arr.map(p=>`<li><span style="min-width:0;overflow:hidden"><a href="${esc(p.link)||'#'}" target="_blank" rel="noopener">${esc(p.title)}</a>
@@ -262,6 +294,7 @@ function openDetail(id){
       ${h&&S.hist.dates.length>1?`<div class="box full"><h4>수집 회차별 가격 변화</h4><div class="chartbox"><canvas id="cHist2"></canvas></div></div>`:''}
       <div class="box"><h4>네이버 상위 상품 (네이버 랭킹순)</h4>${plist(n.top)}</div>
       <div class="box"><h4>쿠팡 상위 상품</h4>${plist(c?.top,true)}</div>
+      ${it.news?`<div class="box full"><h4>관련 최신 뉴스 (네이버 뉴스 "${esc(it.keyword)}")</h4>${nlist(it.news)}</div>`:''}
       <div class="box full note"><h4>소싱 메모</h4>
         <p><b>인증·법규</b> — ${esc(it.cert)}</p><p><b>시장 메모</b> — ${esc(it.memo)}</p>
         ${n.categories?.length?`<p><b>네이버 주요 분류</b> — ${n.categories.map(x=>esc(x.path)+' ('+x.share+'%)').join(', ')}</p>`:''}</div>
@@ -294,7 +327,7 @@ function drawCharts(it,h){
 }
 
 $('#theme').onclick=()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
-  r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('theme',r.dataset.theme)}catch(e){};if(S.sel)openDetail(S.sel)};
+  r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('theme',r.dataset.theme)}catch(e){};renderInsight();if(S.sel)openDetail(S.sel)};
 try{const t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
 load();
 </script>
