@@ -4,331 +4,713 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>안전용품 시장 레이더</title>
+<meta name="description" content="안전·소방·보건·환경 용품의 시장 현황과 1·2·3개월 후 수요 예측 추천">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{
-  --bg:#f6f7f9;--surface:#fff;--surface2:#f1f3f6;--text:#16181d;--muted:#5d6472;--line:#e3e6ec;
-  --accent:#e8590c;--accent-soft:#fff1e8;--good:#2b8a3e;--good-soft:#e9f7ec;--bad:#c92a2a;--bad-soft:#fdecec;--mid:#a26a00;--mid-soft:#fff6db;
-  --g-안전:#1971c2;--g-소방:#e03131;--g-보건:#2f9e44;--g-환경:#0c8599;
-  --radius:14px;--shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.06);
+  --bg:#f4f6fa;--surface:#fff;--surface2:#f1f4f9;--text:#111827;--muted:#5b6475;--line:#e1e6ef;
+  --util:#081a40;
+  --good:#1f8a4c;--good-soft:#e7f6ed;--bad:#c6362f;--bad-soft:#fdecea;--mid:#a26a00;--mid-soft:#fff5d9;
+  --g-전체:#123a80;--g-안전:#1c64c8;--g-소방:#d9342b;--g-보건:#1f9254;--g-환경:#0b8a8f;
+  --accent:var(--g-전체);--accent-soft:color-mix(in srgb,var(--accent) 9%,var(--surface));
+  --radius:14px;--shadow:0 1px 2px rgba(15,23,42,.05),0 4px 14px rgba(15,23,42,.05);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#0f1115;--surface:#171a20;--surface2:#1f232b;--text:#e8eaee;--muted:#9aa1ad;--line:#2a2f38;
-  --accent:#ff8a3d;--accent-soft:#2c1c12;--good:#51cf66;--good-soft:#14261a;--bad:#ff6b6b;--bad-soft:#2c1616;--mid:#fcc419;--mid-soft:#2a2410;
-  --g-안전:#4dabf7;--g-소방:#ff6b6b;--g-보건:#69db7c;--g-환경:#3bc9db;--shadow:none;}}
+  --bg:#0c1018;--surface:#141a24;--surface2:#1b2230;--text:#e7ebf2;--muted:#9aa4b5;--line:#273041;
+  --good:#4fd18b;--good-soft:#13261c;--bad:#ff7a70;--bad-soft:#2c1715;--mid:#f5c542;--mid-soft:#2a2410;
+  --g-전체:#7aa7ff;--g-안전:#5aa2ff;--g-소방:#ff6b61;--g-보건:#4fd18b;--g-환경:#3cc9cf;--shadow:none;}}
 :root[data-theme="dark"]{
-  --bg:#0f1115;--surface:#171a20;--surface2:#1f232b;--text:#e8eaee;--muted:#9aa1ad;--line:#2a2f38;
-  --accent:#ff8a3d;--accent-soft:#2c1c12;--good:#51cf66;--good-soft:#14261a;--bad:#ff6b6b;--bad-soft:#2c1616;--mid:#fcc419;--mid-soft:#2a2410;
-  --g-안전:#4dabf7;--g-소방:#ff6b6b;--g-보건:#69db7c;--g-환경:#3bc9db;--shadow:none;}
+  --bg:#0c1018;--surface:#141a24;--surface2:#1b2230;--text:#e7ebf2;--muted:#9aa4b5;--line:#273041;
+  --good:#4fd18b;--good-soft:#13261c;--bad:#ff7a70;--bad-soft:#2c1715;--mid:#f5c542;--mid-soft:#2a2410;
+  --g-전체:#7aa7ff;--g-안전:#5aa2ff;--g-소방:#ff6b61;--g-보건:#4fd18b;--g-환경:#3cc9cf;--shadow:none;}
+:root[data-group="안전"]{--accent:var(--g-안전)}:root[data-group="소방"]{--accent:var(--g-소방)}
+:root[data-group="보건"]{--accent:var(--g-보건)}:root[data-group="환경"]{--accent:var(--g-환경)}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+html{scroll-behavior:smooth;scroll-padding-top:80px}
+body{margin:0;word-break:keep-all;overflow-wrap:break-word;background:var(--bg);color:var(--text);font-family:Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+button{font:inherit;color:inherit}
 .wrap{max-width:1240px;margin:0 auto;padding:0 16px}
-header{background:var(--surface);border-bottom:1px solid var(--line)}
-.hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 0;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px}
-.logo{width:34px;height:34px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:#fff;font-weight:800}
-h1{font-size:19px;margin:0;letter-spacing:-.02em}
-.sub{color:var(--muted);font-size:13px}
-.upd{font-size:13px;color:var(--muted);text-align:right}
-.upd b{color:var(--text);font-weight:600}
-.banner{margin:16px 0 0;padding:12px 14px;border-radius:10px;background:var(--mid-soft);color:var(--text);font-size:14px;border:1px solid color-mix(in srgb,var(--mid) 35%,transparent)}
-.banner strong{color:var(--mid)}
-section{margin:22px 0}
-h2{font-size:16px;margin:0 0 12px;letter-spacing:-.01em}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.skip{position:absolute;left:-999px;top:0;background:#fff;color:#000;padding:8px 12px;z-index:100}.skip:focus{left:8px}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 60%,transparent);outline-offset:2px}
+
+/* 상단 유틸바 */
+.util{background:var(--util);color:#c9d4ea;font-size:12.5px}
+.util .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:36px;flex-wrap:wrap}
+.util b{color:#fff;font-weight:600}
+.util .r{display:flex;gap:14px;align-items:center;margin-left:auto}
+.util button{background:none;border:1px solid #2c3f6b;color:#dbe4f5;border-radius:6px;padding:3px 9px;cursor:pointer;font-size:12px}
+
+/* 헤더·GNB */
+header{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
+.hd{display:flex;align-items:center;gap:28px;min-height:72px;position:relative}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;flex-shrink:0}
+.brand svg{width:40px;height:40px}
+.brand .t1{font-size:19px;font-weight:800;letter-spacing:-.03em;line-height:1.15}
+.brand .t2{font-size:11px;color:var(--muted);letter-spacing:.08em;font-weight:600}
+nav.gnb{display:flex;gap:2px;flex:1;justify-content:flex-end}
+.gnb a{position:relative;padding:24px 13px;font-weight:700;font-size:16px;text-decoration:none;color:var(--text);white-space:nowrap;letter-spacing:-.02em}
+.gnb a::after{content:"";position:absolute;left:13px;right:13px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:var(--gc,var(--accent));transform:scaleX(0);transition:transform .2s}
+.gnb a:hover::after,.gnb a.on::after{transform:scaleX(1)}
+.gnb a.on{color:var(--gc,var(--accent))}
+.gnb .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gc);margin-right:6px;vertical-align:2px}
+.menu-btn{display:none;margin-left:auto;background:none;border:1px solid var(--line);border-radius:8px;padding:7px 10px;cursor:pointer}
+
+/* 메인 배너 */
+.hero{position:relative;color:#fff;overflow:hidden;background:#071a3f}
+.slide{position:absolute;inset:0;opacity:0;visibility:hidden;transition:opacity .6s,visibility .6s}
+.slide.on{position:relative;opacity:1;visibility:visible}
+.slide .bgx{position:absolute;inset:0;background:var(--hb)}
+.slide .bgx::before{content:"";position:absolute;inset:0;background:radial-gradient(900px 400px at 85% 30%,rgba(255,255,255,.14),transparent 60%),repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 2px,transparent 2px 22px)}
+.slide .art{position:absolute;right:max(2vw,calc(50% - 600px));top:50%;transform:translateY(-58%);width:min(34vw,380px);opacity:.92;pointer-events:none}
+.slide .in{position:relative;padding:56px 16px 104px;min-height:440px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.03em;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);padding:5px 12px;border-radius:999px}
+.hero h2{font-size:clamp(26px,4.1vw,44px);line-height:1.22;margin:16px 0 12px;letter-spacing:-.035em;font-weight:800;max-width:720px}
+.hero h2 em{font-style:normal;background:linear-gradient(transparent 62%,rgba(255,255,255,.28) 0)}
+.hero p.d{font-size:16px;color:rgba(255,255,255,.88);max-width:620px;margin:0 0 22px}
+.hstats{display:flex;gap:10px;flex-wrap:wrap;max-width:720px}
+.hstat{background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:10px 16px;min-width:150px;backdrop-filter:blur(4px)}
+.hstat .l{font-size:12px;color:rgba(255,255,255,.78)}
+.hstat .v{font-size:19px;font-weight:800;letter-spacing:-.02em}
+.hcta{display:flex;gap:8px;margin-top:22px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:11px 18px;border-radius:10px;font-weight:700;font-size:14.5px;text-decoration:none;cursor:pointer;border:1px solid transparent}
+.btn.w{background:#fff;color:#0b2559}.btn.o{border-color:rgba(255,255,255,.55);color:#fff;background:transparent}
+.hctl{position:absolute;left:0;right:0;bottom:0;z-index:3;background:rgba(5,15,40,.38);backdrop-filter:blur(6px);border-top:1px solid rgba(255,255,255,.12)}
+.hctl .wrap{display:flex;align-items:stretch}
+.htabs{display:flex;flex:1;overflow-x:auto;scrollbar-width:none}
+.htabs::-webkit-scrollbar{display:none}
+.htab{flex:1;min-width:96px;background:none;border:0;color:rgba(255,255,255,.7);padding:15px 10px 13px;cursor:pointer;font-weight:700;font-size:14.5px;position:relative;white-space:nowrap}
+.htab small{display:block;font-weight:500;font-size:11.5px;opacity:.8;margin-top:1px}
+.htab::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:rgba(255,255,255,.18)}
+.htab.on{color:#fff}
+.htab.on::before{background:#fff}
+.htab.on.run::before{background:linear-gradient(90deg,#fff var(--p,0%),rgba(255,255,255,.18) 0)}
+.hbtns{display:flex;align-items:center;gap:6px;padding-left:12px}
+.hbtns button{width:32px;height:32px;border-radius:50%;border:1px solid rgba(255,255,255,.4);background:none;color:#fff;cursor:pointer;display:grid;place-items:center;font-size:12px}
+.hbtns .cnt{font-size:12.5px;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums;min-width:44px;text-align:center}
+
+/* 퀵메뉴 */
+.quick{position:relative;z-index:5;margin-top:22px}
+.qgrid{display:grid;grid-template-columns:repeat(6,1fr);background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+.q{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 8px 18px;text-decoration:none;font-weight:700;font-size:14px;border-right:1px solid var(--line);transition:background .15s;text-align:center}
+.q:last-child{border-right:0}
+.q:hover{background:var(--accent-soft)}
+.q .ic{width:50px;height:50px;border-radius:16px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.q .ic svg{width:26px;height:26px}
+.q small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:-4px}
+
+/* 공통 섹션 */
+main section{margin:46px 0}
+.sh{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.sh h2{font-size:24px;margin:0;letter-spacing:-.035em;font-weight:800;display:flex;align-items:center;gap:10px}
+.sh h2::before{content:"";width:6px;height:24px;border-radius:3px;background:var(--accent)}
+.sh .desc{color:var(--muted);font-size:14px;margin-top:4px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
-.kpi{padding:14px 16px}
-.kpi .l{font-size:12.5px;color:var(--muted)}
-.kpi .v{font-size:22px;font-weight:700;margin-top:4px;letter-spacing:-.02em}
+.notice{margin:18px 0 0;padding:12px 16px;border-radius:12px;background:var(--mid-soft);font-size:14px;border:1px solid color-mix(in srgb,var(--mid) 30%,transparent)}
+.notice strong{color:var(--mid)}
+.na{color:var(--muted)}
+.up{color:var(--good);font-weight:700}.dn{color:var(--bad);font-weight:700}
+.tag{display:inline-block;font-size:11.5px;padding:1px 8px;border-radius:6px;color:var(--gc);background:color-mix(in srgb,var(--gc) 13%,transparent);font-weight:700;white-space:nowrap}
+
+/* 시장 현황 */
+.brief{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
+.bcard{padding:22px 24px}
+.bcard h3{margin:0 0 4px;font-size:15px;color:var(--muted);font-weight:700}
+.bcard .big{font-size:22px;font-weight:800;letter-spacing:-.03em;margin:2px 0 12px;line-height:1.4}
+.blist{margin:0;padding:0;list-style:none}
+.blist li{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--line);font-size:14.5px}
+.blist li:first-child{border-top:0}
+.blist .k{flex:0 0 88px;color:var(--muted);font-weight:600;font-size:13.5px;padding-top:1px}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.kpi{padding:16px 18px;min-width:0}
+.kpi .l{font-size:13px;color:var(--muted);font-weight:600}
+.kpi .v{font-size:23px;font-weight:800;margin-top:3px;letter-spacing:-.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .kpi .s{font-size:12.5px;color:var(--muted);margin-top:2px}
-.groups{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.grp{padding:14px 16px;cursor:pointer;border-top:3px solid var(--gc);transition:transform .1s}
-.grp:hover{transform:translateY(-1px)}
+.groups{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.grp{padding:16px 18px;cursor:pointer;border-top:4px solid var(--gc);transition:transform .12s;text-align:left;width:100%;background:var(--surface)}
+.grp:hover{transform:translateY(-2px)}
 .grp.on{outline:2px solid var(--gc)}
-.grp .t{display:flex;justify-content:space-between;font-weight:700}
-.grp .row{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-top:6px}
-.grp .row b{color:var(--text);font-weight:600}
+.grp .t{display:flex;justify-content:space-between;align-items:center;font-weight:800;font-size:17px}
+.grp .row{display:flex;justify-content:space-between;font-size:13.5px;color:var(--muted);margin-top:7px;gap:8px}
+.grp .row b{color:var(--text);font-weight:700;text-align:right}
+.grp .st{margin-top:10px;font-size:12.5px;padding:6px 9px;border-radius:8px;background:color-mix(in srgb,var(--gc) 8%,transparent);color:var(--text)}
+
+/* AI 추천 */
+.ai-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.aibadge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800;color:#fff;background:linear-gradient(90deg,#4b3bd6,#1c64c8);padding:4px 10px;border-radius:999px;letter-spacing:.02em}
+.htabs2{display:flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface);margin-bottom:16px}
+.htabs2 button{flex:1;padding:14px 10px;background:none;border:0;border-right:1px solid var(--line);cursor:pointer;font-weight:700;font-size:15.5px;color:var(--muted)}
+.htabs2 button:last-child{border-right:0}
+.htabs2 button small{display:block;font-size:12.5px;font-weight:500}
+.htabs2 button.on{background:var(--accent);color:#fff}
+.recs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.rec{padding:18px 18px 16px;position:relative;cursor:pointer;transition:transform .12s;display:flex;flex-direction:column}
+.rec:hover{transform:translateY(-2px)}
+.rec .rk{position:absolute;top:14px;right:16px;font-size:30px;font-weight:900;color:color-mix(in srgb,var(--gc) 25%,transparent);letter-spacing:-.04em;line-height:1}
+.rec .nm{font-size:18px;font-weight:800;letter-spacing:-.03em;margin:6px 0 2px;padding-right:44px}
+.rec .meta{font-size:12.5px;color:var(--muted)}
+.rec .nums{display:flex;gap:16px;margin:12px 0 10px;align-items:flex-end}
+.rec .nums div{font-size:12px;color:var(--muted)}
+.rec .nums b{display:block;font-size:20px;color:var(--text);letter-spacing:-.02em}
+.rec .nums b.up{color:var(--good)}.rec .nums b.dn{color:var(--bad)}
+.sbar{height:7px;border-radius:4px;background:var(--surface2);overflow:hidden;margin-bottom:12px}
+.sbar i{display:block;height:100%;background:linear-gradient(90deg,color-mix(in srgb,var(--gc) 55%,transparent),var(--gc));border-radius:4px}
+.rec ul{margin:0 0 12px;padding:0;list-style:none;font-size:13.5px}
+.rec li{padding:3px 0 3px 16px;position:relative}
+.rec li::before{content:"";position:absolute;left:3px;top:11px;width:5px;height:5px;border-radius:50%;background:var(--gc)}
+.conf{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.conf.높음{background:var(--good-soft);color:var(--good)}.conf.보통{background:var(--mid-soft);color:var(--mid)}.conf.낮음{background:var(--bad-soft);color:var(--bad)}
+.season{margin-top:auto;display:flex;align-items:flex-end;gap:10px;font-size:11.5px;color:var(--muted)}
+.season svg{flex:1;height:30px}
+.rtable{margin-top:14px}
+.rtable table{min-width:680px}
+.ai-note{font-size:13px;color:var(--muted);margin-top:12px;line-height:1.65}
+.empty{grid-column:1/-1;padding:28px;text-align:center;color:var(--muted)}
+
+/* 표 */
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-.chip{border:1px solid var(--line);background:var(--surface);color:var(--text);padding:7px 13px;border-radius:999px;font:inherit;font-size:13.5px;cursor:pointer}
-.chip.on{background:var(--text);color:var(--bg);border-color:var(--text)}
-.search{flex:1;min-width:160px;max-width:280px;margin-left:auto;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:inherit;font-size:14px}
+.chip{border:1px solid var(--line);background:var(--surface);color:var(--text);padding:7px 14px;border-radius:999px;font-size:13.5px;cursor:pointer;font-weight:600}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.search{flex:1;min-width:160px;max-width:280px;margin-left:auto;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:inherit;font-size:14px}
 .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-table{width:100%;border-collapse:collapse;font-size:14px;min-width:980px}
-th,td{padding:11px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
-th{font-size:12.5px;color:var(--muted);font-weight:600;cursor:pointer;user-select:none;background:var(--surface2);position:sticky;top:0}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:900px}
+th,td{padding:12px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:12.5px;color:var(--muted);font-weight:700;cursor:pointer;user-select:none;background:var(--surface2)}
 th:first-child,td:first-child{text-align:center;width:44px}
 th.l,td.l{text-align:left}
 th .ar{opacity:.5;margin-left:3px}
 tbody tr{cursor:pointer}
 tbody tr:hover{background:var(--surface2)}
 tbody tr.sel{background:var(--accent-soft)}
-.nm{font-weight:600}
-.tag{display:inline-block;font-size:11.5px;padding:1px 7px;border-radius:6px;margin-left:6px;color:var(--gc);background:color-mix(in srgb,var(--gc) 13%,transparent);font-weight:600}
+.nm2{font-weight:700;margin-right:6px}
 .subt{display:block;font-size:12px;color:var(--muted);font-weight:400}
 .bar{display:inline-flex;align-items:center;gap:8px}
 .bar i{display:block;height:6px;border-radius:3px;background:var(--accent);min-width:2px}
 .bar span{min-width:24px;font-weight:700}
-.up{color:var(--good);font-weight:600}.dn{color:var(--bad);font-weight:600}
-.pill{font-size:12px;padding:2px 8px;border-radius:999px;font-weight:600}
+.pill{font-size:12px;padding:2px 8px;border-radius:999px;font-weight:700}
 .pill.낮음{background:var(--good-soft);color:var(--good)}.pill.보통{background:var(--mid-soft);color:var(--mid)}.pill.높음{background:var(--bad-soft);color:var(--bad)}
-.na{color:var(--muted)}
 .cert{max-width:180px;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:bottom;font-size:12.5px;color:var(--muted)}
-#detail{display:none}
-.dhead{padding:18px 18px 4px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
-.dhead h3{margin:0;font-size:20px;letter-spacing:-.02em}
-.close{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit;font-size:13px}
-.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:14px 18px 18px}
-.box{background:var(--surface2);border-radius:12px;padding:14px}
-.box h4{margin:0 0 10px;font-size:13.5px;color:var(--muted);font-weight:600}
+
+/* 상세 */
+#detail{display:none;margin-top:16px}
+.dhead{padding:20px 20px 4px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.dhead h3{margin:0;font-size:22px;letter-spacing:-.03em}
+.close{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:14px 20px 20px}
+.box{background:var(--surface2);border-radius:12px;padding:14px;min-width:0}
+.box h4{margin:0 0 10px;font-size:13.5px;color:var(--muted);font-weight:700}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .stats div{font-size:12px;color:var(--muted)}
 .stats b{display:block;font-size:16px;color:var(--text);margin-top:2px}
-.note{font-size:13.5px;line-height:1.6}
+.note{font-size:13.5px;line-height:1.65}
 .note p{margin:0 0 8px}
-.chartbox{position:relative;height:220px}
+.chartbox{position:relative;height:230px}
 .plist{list-style:none;margin:0;padding:0;font-size:13.5px}
-.plist li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.plist li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
 .plist li:last-child{border:none}
-.plist a{color:var(--text);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.plist a{color:var(--text);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;font-weight:600}
 .plist a:hover{text-decoration:underline}
-.plist .pr{font-weight:600;white-space:nowrap}
-.plist .ml{color:var(--muted);font-size:12px}
+.plist .pr{font-weight:700;white-space:nowrap}
+.plist .ml{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .full{grid-column:1/-1}
-footer{color:var(--muted);font-size:12.5px;padding:24px 0 40px;line-height:1.7}
-.theme{border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:5px 9px;cursor:pointer;font:inherit;font-size:12px;margin-left:8px}
-@media (max-width:860px){.kpis,.groups{grid-template-columns:repeat(2,1fr)}.dgrid{grid-template-columns:1fr}.upd{text-align:left}.search{max-width:none;margin-left:0}}
-@media (max-width:420px){.groups{grid-template-columns:1fr}.kpi .v{font-size:19px}.stats{grid-template-columns:repeat(2,1fr)}}
+
+/* 뉴스 */
+.news{display:grid;grid-template-columns:repeat(2,1fr);gap:0 28px;padding:6px 22px}
+
+/* 푸터 */
+footer{background:#0f1729;color:#a9b4c8;margin-top:60px;font-size:13px;line-height:1.75}
+footer .wrap{padding:34px 16px 44px}
+footer .fb{display:flex;align-items:center;gap:10px;color:#fff;font-weight:800;font-size:17px;margin-bottom:14px}
+footer .fb svg{width:30px;height:30px}
+footer b{color:#e2e8f3}
+footer .links{margin:14px 0;padding:12px 0;border-top:1px solid #243049;border-bottom:1px solid #243049;color:#dfe6f2;font-weight:600}
+
+@media (max-width:1020px){
+  .gnb a{padding:24px 8px;font-size:15px}
+  .recs{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:860px){
+  .menu-btn{display:block}
+  nav.gnb{display:none;position:absolute;left:-16px;right:-16px;top:100%;background:var(--surface);flex-direction:column;border-bottom:1px solid var(--line);padding:6px 16px 12px;box-shadow:var(--shadow)}
+  nav.gnb.open{display:flex}
+  .gnb a{padding:12px 4px;border-bottom:1px solid var(--line)}
+  .gnb a::after{display:none}
+  .brief{grid-template-columns:1fr}
+  .groups{grid-template-columns:repeat(2,1fr)}
+  .qgrid{grid-template-columns:repeat(3,1fr)}
+  .q:nth-child(3){border-right:0}.q:nth-child(-n+3){border-bottom:1px solid var(--line)}
+  .dgrid{grid-template-columns:1fr}
+  .news{grid-template-columns:1fr}
+  .slide .art{opacity:.22;width:62vw;right:-10vw}
+  .slide .in{padding:40px 16px 96px;min-height:420px}
+  .htab{min-width:68px;font-size:13.5px}
+  .htab small{display:none}
+  .hbtns .cnt{display:none}
+}
+@media (max-width:560px){
+  .recs{grid-template-columns:1fr}
+  .groups{grid-template-columns:1fr}
+  .kpi .v{font-size:19px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .htabs2 button{font-size:14px;padding:12px 4px}
+  .hstat{min-width:0;flex:1 1 40%}
+  .util .l,.util .nx{display:none}
+  .hero h2 br{display:none}
+  #hPrev,#hNext{display:none}
+  .htab{min-width:0;padding:14px 4px 12px}
+  .brand .t1{font-size:17px}
+  .brand svg{width:34px;height:34px}
+  .sh h2{font-size:21px}
+  .q{font-size:13px;padding:16px 4px 14px}.q small{display:none}
+  .blist .k{flex-basis:72px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
+<a class="skip" href="#main">본문 바로가기</a>
+
+<div class="util"><div class="wrap">
+  <div class="l">공개 데이터 기반 안전·소방·보건·환경 용품 시장 분석 누리집</div>
+  <div class="r"><span id="upd">데이터 불러오는 중…</span><button id="theme" type="button">테마 전환</button></div>
+</div></div>
+
 <header><div class="wrap hd">
-  <div class="brand"><div class="logo">安</div><div><h1>안전·소방·보건·환경 용품 시장 레이더</h1><div class="sub">네이버 쇼핑 · 쿠팡 인기 품목과 가격 현황</div></div></div>
-  <div class="upd" id="upd">불러오는 중…</div>
+  <a class="brand" href="#top" data-go="전체" aria-label="안전용품 시장 레이더 홈">
+    <svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1c64c8"/><stop offset="1" stop-color="#0b2559"/></linearGradient></defs>
+      <path d="M20 2 35 8v11c0 9.5-6.4 16.4-15 19-8.6-2.6-15-9.5-15-19V8z" fill="url(#lg)"/>
+      <path d="M20 26a7 7 0 1 1 7-7" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><path d="M20 31a12 12 0 1 1 12-12" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="20" cy="19" r="2.6" fill="#ffd34d"/><path d="M20 19 29 11" stroke="#ffd34d" stroke-width="2" stroke-linecap="round"/></svg>
+    <span><span class="t1">안전용품 시장 레이더</span><br><span class="t2">SAFETY MARKET RADAR</span></span>
+  </a>
+  <button class="menu-btn" id="menuBtn" type="button" aria-expanded="false" aria-controls="gnb">메뉴 ☰</button>
+  <nav class="gnb" id="gnb" aria-label="주 메뉴">
+    <a href="#top" data-go="전체">홈</a>
+    <a href="#top" data-go="안전" style="--gc:var(--g-안전)"><span class="dot"></span>안전</a>
+    <a href="#top" data-go="소방" style="--gc:var(--g-소방)"><span class="dot"></span>소방</a>
+    <a href="#top" data-go="보건" style="--gc:var(--g-보건)"><span class="dot"></span>보건</a>
+    <a href="#top" data-go="환경" style="--gc:var(--g-환경)"><span class="dot"></span>환경</a>
+    <a href="#ai">AI 수요예측</a>
+    <a href="#rank">품목 순위</a>
+    <a href="#newsSec">업계 뉴스</a>
+  </nav>
 </div></header>
 
-<main class="wrap">
-  <div id="banner"></div>
+<div id="top" class="hero" aria-roledescription="carousel" aria-label="분야별 주요 소식">
+  <div id="slides"></div>
+  <div class="hctl"><div class="wrap">
+    <div class="htabs" id="htabs" role="tablist"></div>
+    <div class="hbtns">
+      <button type="button" id="hPrev" aria-label="이전 배너">◀</button>
+      <span class="cnt" id="hCnt">1 / 5</span>
+      <button type="button" id="hPlay" aria-label="자동 넘김 정지">❚❚</button>
+      <button type="button" id="hNext" aria-label="다음 배너">▶</button>
+    </div>
+  </div></div>
+</div>
 
-  <section><div class="kpis" id="kpis"></div></section>
+<main id="main" class="wrap">
+  <div class="quick"><div class="qgrid">
+    <a class="q" href="#status"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></span>시장 현황<small>현재 수요 요약</small></a>
+    <a class="q" href="#ai" data-h="1"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span class="qm" data-h="1">1개월 후</span><small>AI 추천</small></a>
+    <a class="q" href="#ai" data-h="2"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span><span class="qm" data-h="2">2개월 후</span><small>AI 추천</small></a>
+    <a class="q" href="#ai" data-h="3"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.6 6.3L21 9l-5 4.4L17.5 20 12 16.6 6.5 20 8 13.4 3 9l6.4-.7z"/></svg></span><span class="qm" data-h="3">3개월 후</span><small>AI 추천</small></a>
+    <a class="q" href="#rank"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>품목 순위<small>전체 품목 비교</small></a>
+    <a class="q" href="#newsSec"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h13v16H6a2 2 0 0 1-2-2z"/><path d="M17 8h3v10a2 2 0 0 1-2 2M8 8h5M8 12h5M8 16h3"/></svg></span>업계 뉴스<small>최신 기사</small></a>
+  </div></div>
 
-  <section><h2>분야별 요약</h2><div class="groups" id="groups"></div></section>
+  <div id="notices"></div>
 
-  <section id="insight" style="display:none"><h2>쇼핑인사이트 분야별 클릭 추이 <span class="sub" style="font-weight:400">— 네이버 쇼핑 클릭량 상대지수 (최근 6개월)</span></h2>
-    <div class="card" style="padding:16px"><div class="chartbox" style="height:240px"><canvas id="cInsight"></canvas></div></div></section>
-
-  <section id="newsSec" style="display:none"><h2>최근 업계 뉴스 <span class="sub" style="font-weight:400">— 품목 키워드 기준 최신순</span></h2>
-    <div class="card" style="padding:6px 16px" id="newsAll"></div></section>
-
-  <section>
-    <h2>품목 순위 <span class="sub" style="font-weight:400">— 행을 누르면 상세 분석이 열립니다</span></h2>
-    <div class="toolbar" id="toolbar"></div>
-    <div class="card tbl-wrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+  <section id="status">
+    <div class="sh"><div><h2><span id="stTitle">현재 시장 현황</span></h2><div class="desc">네이버 검색 관심도·뉴스 기반 수요 현황입니다. 실제 판매량은 공개되지 않아 수요 지표로 대신합니다.</div></div></div>
+    <div class="brief">
+      <div class="card bcard" id="briefMain"></div>
+      <div class="kpis" id="kpis"></div>
+    </div>
+    <div class="groups" id="groups"></div>
   </section>
 
-  <section id="detail" class="card"></section>
+  <section id="ai">
+    <div class="sh"><div><div class="ai-head"><h2><span id="aiTitle">AI 수요 예측 추천</span></h2><span class="aibadge">AI 분석</span></div>
+      <div class="desc">최근 3년 월별 검색 패턴(계절성)과 전년 대비 추세, 최근 뉴스량을 함께 분석해 판매가 늘어날 품목을 추천합니다.</div></div></div>
+    <div class="htabs2" id="hz" role="tablist"></div>
+    <div class="recs" id="recs"></div>
+    <div class="card rtable tbl-wrap" id="rtable"></div>
+    <div class="ai-note" id="aiNote"></div>
+  </section>
 
-  <footer>
-    <b>지표 설명</b><br>
-    · <b>인기점수(0~100)</b>: 네이버 월간 검색량(60%) + 데이터랩 관심도(40%)를 정규화한 상대 점수. 실제 판매량은 공개되지 않으므로 수요를 대신 나타내는 추정치입니다.<br>
-    · <b>평균가</b>: 상·하위 5% 이상치(부속품·대량세트)를 제외한 평균. <b>최저가</b>는 원본 최저값이라 부속품이 섞일 수 있으니 <b>하위10%</b> 가격을 실질 진입가로 보세요.<br>
-    · <b>경쟁강도</b>: 네이버 등록 상품 수 ÷ 월간 검색량. 3 미만 낮음(진입 기회), 15 이상 높음.<br>
-    · <b>추세</b>: 최근 4주 관심도 ÷ 직전 4주 관심도 변화율. 검색어트렌드·뉴스·쇼핑인사이트는 NAVER API HUB(네이버 클라우드)로 수집합니다.<br>
-    · 쿠팡 데이터는 API 호출 제한 때문에 실행할 때마다 일부 품목씩 순환 갱신됩니다. 인증 정보는 참고용이니 판매 전 최신 법령을 꼭 확인하세요.
-    <button class="theme" id="theme">테마 전환</button>
-  </footer>
+  <section id="insight" style="display:none">
+    <div class="sh"><div><h2>쇼핑인사이트 분야별 클릭 추이</h2><div class="desc">네이버 쇼핑 클릭량 상대지수 (최근 6개월)</div></div></div>
+    <div class="card" style="padding:16px"><div class="chartbox" style="height:260px"><canvas id="cInsight"></canvas></div></div>
+  </section>
+
+  <section id="rank">
+    <div class="sh"><div><h2><span id="rkTitle">품목 순위</span></h2><div class="desc">행을 누르면 상세 분석과 3년 추이·예측 그래프가 열립니다.</div></div></div>
+    <div class="toolbar" id="toolbar"></div>
+    <div class="card tbl-wrap"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+    <div id="detail" class="card"></div>
+  </section>
+
+  <section id="newsSec" style="display:none">
+    <div class="sh"><div><h2><span id="nwTitle">최근 업계 뉴스</span></h2><div class="desc">품목 키워드 기준 최신순</div></div></div>
+    <div class="card news" id="newsAll"></div>
+  </section>
 </main>
 
+<footer><div class="wrap">
+  <div class="fb"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2 35 8v11c0 9.5-6.4 16.4-15 19-8.6-2.6-15-9.5-15-19V8z" fill="#1c64c8"/><circle cx="20" cy="19" r="3" fill="#ffd34d"/></svg>안전용품 시장 레이더</div>
+  <div class="links">데이터 출처: NAVER API HUB(검색어트렌드·뉴스·쇼핑인사이트) · 네이버 개발자센터 · 네이버 검색광고 · 쿠팡 파트너스</div>
+  <b>지표 안내</b><br>
+  · <b>인기점수(0~100)</b>: 월간 검색량과 검색 관심도를 정규화한 상대 점수입니다. 실제 판매량이 아닌 수요 추정치입니다.<br>
+  · <b>AI 추천 점수</b>: 예상 수요 규모 55% + 이번 달 대비 증가율 35% + 최근 뉴스 관심 10%. 신뢰도는 과거 같은 달의 패턴이 얼마나 일정했는지로 판단합니다.<br>
+  · <b>추세</b>: 최근 4주 관심도 ÷ 직전 4주 관심도 변화율. <b>경쟁강도</b>: 등록 상품 수 ÷ 월간 검색량.<br>
+  · 예측은 과거 패턴에 기반한 참고 자료이며 제도 변경·사고·날씨 등 돌발 요인은 반영되지 않을 수 있습니다. 인증 정보는 판매 전 최신 법령을 꼭 확인하세요.
+  <div style="margin-top:12px;color:#7d889e">GitHub Actions로 3일마다 자동 갱신 · GitHub Pages 무료 호스팅</div>
+</div></footer>
+
 <script>
-const $=s=>document.querySelector(s);
+const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
 const won=v=>v==null?'<span class="na">–</span>':Math.round(v).toLocaleString('ko-KR')+'원';
 const num=v=>v==null?'<span class="na">–</span>':Math.round(v).toLocaleString('ko-KR');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const GROUPS=['안전','소방','보건','환경'];
+const pc=(v,d=1)=>v==null?'–':(v>=0?'+':'')+v.toFixed(d)+'%';
+const arrow=v=>v==null?'<span class="na">–</span>':`<span class="${v>=0?'up':'dn'}">${v>=0?'▲':'▼'} ${Math.abs(v).toFixed(1)}%</span>`;
+const avg=xs=>{xs=xs.filter(x=>x!=null&&!isNaN(x));return xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null};
+const GROUPS=['안전','소방','보건','환경'], KEYS=['전체',...GROUPS];
 const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-const S={data:null,hist:null,group:'전체',q:'',sort:{k:'score',d:-1},sel:null,charts:[],gcharts:[]};
-const ago=s=>{if(!s)return'';const h=(Date.now()-new Date(s))/36e5;return h<1?'방금':h<24?Math.floor(h)+'시간 전':Math.floor(h/24)+'일 전'};
-function nlist(arr,withName){
-  if(!arr?.length)return '<p class="na">뉴스 없음</p>';
-  return '<ul class="plist">'+arr.map(n=>`<li><span style="min-width:0;overflow:hidden"><a href="${esc(n.link)||'#'}" target="_blank" rel="noopener">${esc(n.title)}</a>
-    <div class="ml">${withName?`<b>${esc(n.item)}</b> · `:''}${esc(n.desc||'')}</div></span><span class="pr" style="font-weight:400;color:var(--muted);white-space:nowrap">${ago(n.date)}</span></li>`).join('')+'</ul>';
-}
+const mLabel=ym=>ym?parseInt(ym.slice(5,7))+'월':'';
+const S={data:null,hist:null,group:'전체',h:1,q:'',sort:{k:'score',d:-1},sel:null,charts:[],gcharts:[],slide:0,paused:false,t0:0,raf:0};
 
+const HERO={
+  전체:{bg:'linear-gradient(120deg,#071a3f 0%,#0f2f6e 55%,#1c4fa8 100%)',eb:'SAFETY MARKET RADAR',sub:'시장 레이더',icon:'radar'},
+  안전:{bg:'linear-gradient(120deg,#08245a 0%,#124aa8 60%,#2b7de0 100%)',eb:'안전 분야',sub:'개인보호구·현장안전',icon:'helmet'},
+  소방:{bg:'linear-gradient(120deg,#4a0b0b 0%,#a31f1a 60%,#e2492f 100%)',eb:'소방 분야',sub:'소화·경보·피난',icon:'flame'},
+  보건:{bg:'linear-gradient(120deg,#073824 0%,#13724a 60%,#27a866 100%)',eb:'보건 분야',sub:'응급·위생·온열',icon:'cross'},
+  환경:{bg:'linear-gradient(120deg,#033b3e 0%,#0a7076 60%,#14a3a0 100%)',eb:'환경 분야',sub:'방제·흡착·분리배출',icon:'leaf'},
+};
+const ART={
+  radar:`<svg viewBox="0 0 200 200" fill="none" stroke="#fff"><circle cx="100" cy="100" r="88" stroke-opacity=".25" stroke-width="2"/><circle cx="100" cy="100" r="62" stroke-opacity=".3" stroke-width="2"/><circle cx="100" cy="100" r="36" stroke-opacity=".4" stroke-width="2"/><path d="M100 100 L170 46 A88 88 0 0 1 188 100 Z" fill="#ffd34d" fill-opacity=".18" stroke="none"/><path d="M100 100 L170 46" stroke="#ffd34d" stroke-width="4" stroke-linecap="round"/><circle cx="100" cy="100" r="6" fill="#ffd34d" stroke="none"/><circle cx="148" cy="72" r="6" fill="#fff" stroke="none"/><circle cx="62" cy="140" r="5" fill="#fff" fill-opacity=".7" stroke="none"/><circle cx="130" cy="150" r="4" fill="#fff" fill-opacity=".6" stroke="none"/></svg>`,
+  helmet:`<svg viewBox="0 0 200 200" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"><path d="M40 128c0-38 27-66 60-66s60 28 60 66" fill="#fff" fill-opacity=".14"/><path d="M28 128h144v14H28z" fill="#fff" fill-opacity=".25"/><path d="M88 62v-6h24v6M100 62v40" stroke-opacity=".8"/><path d="M60 100c6-14 16-24 28-30M140 100c-6-14-16-24-28-30" stroke-opacity=".55"/></svg>`,
+  flame:`<svg viewBox="0 0 200 200" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"><path d="M100 24c10 30 46 46 46 92a46 46 0 0 1-92 0c0-22 10-36 22-46 0 18 8 28 18 30-6-30 2-56 6-76z" fill="#fff" fill-opacity=".15"/><path d="M100 168a20 20 0 0 1-20-20c0-14 12-22 16-34 10 12 24 20 24 34a20 20 0 0 1-20 20z" fill="#ffd34d" fill-opacity=".55" stroke="none"/></svg>`,
+  cross:`<svg viewBox="0 0 200 200" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round"><rect x="30" y="30" width="140" height="140" rx="32" fill="#fff" fill-opacity=".1"/><path d="M82 52h36v30h30v36h-30v30H82v-30H52V82h30z" fill="#fff" fill-opacity=".3"/></svg>`,
+  leaf:`<svg viewBox="0 0 200 200" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M40 160C40 80 90 40 170 36c-2 80-44 128-122 126z" fill="#fff" fill-opacity=".14"/><path d="M48 154c30-40 62-70 100-96" stroke-opacity=".7"/><path d="M90 118h30M72 136h24M108 96h22" stroke-opacity=".45"/></svg>`,
+};
+
+const fh=(it,h)=>it.forecast?.h?.find(x=>x.h===h);
 const COLS=[
   {k:'rank',t:'#',v:(it,i)=>i+1,nosort:1},
-  {k:'name',t:'품목',l:1,v:it=>it.name,h:it=>`<span class="nm">${esc(it.name)}</span><span class="tag" style="--gc:var(--g-${it.group})">${it.group}</span><span class="subt">${esc(it.sub)} · "${esc(it.keyword)}"</span>`},
+  {k:'name',t:'품목',l:1,v:it=>it.name,h:it=>`<span class="nm2">${esc(it.name)}</span><span class="tag" style="--gc:var(--g-${it.group})">${it.group}</span><span class="subt">${esc(it.sub)} · "${esc(it.keyword)}"</span>`},
   {k:'score',t:'인기점수',v:it=>it.score,h:it=>it.score==null?'<span class="na">–</span>':`<span class="bar"><i style="width:${Math.max(2,it.score*0.6)}px"></i><span>${it.score}</span></span>`},
+  {k:'growth',t:'4주 추세',v:it=>it.trend?.growth,h:it=>arrow(it.trend?.growth)},
+  {k:'f1',t:'1개월 후 예측',v:it=>fh(it,1)?.change,h:it=>arrow(fh(it,1)?.change)},
+  {k:'f3',t:'3개월 후 예측',v:it=>fh(it,3)?.change,h:it=>arrow(fh(it,3)?.change)},
+  {k:'peak',t:'성수기',v:it=>it.forecast?.peak,h:it=>it.forecast?it.forecast.peak+'월':'<span class="na">–</span>'},
+  {k:'buzz',t:'주간 뉴스',v:it=>it.buzz,h:it=>num(it.buzz)},
   {k:'vol',t:'월 검색량',v:it=>it.search?.total,h:it=>num(it.search?.total)},
-  {k:'growth',t:'4주 추세',v:it=>it.trend?.growth,h:it=>{const g=it.trend?.growth;return g==null?'<span class="na">–</span>':`<span class="${g>=0?'up':'dn'}">${g>=0?'▲':'▼'} ${Math.abs(g).toFixed(1)}%</span>`}},
-  {k:'nmin',t:'네이버 최저가',v:it=>it.naver?.min,h:it=>won(it.naver?.min)},
-  {k:'np10',t:'하위10%',v:it=>it.naver?.p10,h:it=>won(it.naver?.p10)},
   {k:'navg',t:'평균가',v:it=>it.naver?.avg,h:it=>`<b>${won(it.naver?.avg)}</b>`},
-  {k:'nmed',t:'중앙값',v:it=>it.naver?.median,h:it=>won(it.naver?.median)},
-  {k:'cmin',t:'쿠팡 최저가',v:it=>it.coupang?.min,h:it=>won(it.coupang?.min)},
+  {k:'nmin',t:'최저가',v:it=>it.naver?.min,h:it=>won(it.naver?.min)},
   {k:'cavg',t:'쿠팡 평균',v:it=>it.coupang?.avg,h:it=>won(it.coupang?.avg)},
-  {k:'items',t:'등록 상품 수',v:it=>it.naver?.total,h:it=>num(it.naver?.total)},
   {k:'comp',t:'경쟁강도',v:it=>it.competition?.ratio,h:it=>it.competition?`<span class="pill ${it.competition.level}">${it.competition.level}</span>`:'<span class="na">–</span>'},
   {k:'cert',t:'인증',l:1,v:it=>it.cert,h:it=>`<span class="cert" title="${esc(it.cert)}">${esc(it.cert)}</span>`},
 ];
-
-function fmtDate(s){if(!s)return'–';const d=new Date(s);return d.toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+function fmtDate(s){if(!s)return'–';return new Date(s).toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'})}
+const ago=s=>{if(!s)return'';const h=(Date.now()-new Date(s))/36e5;return h<1?'방금':h<24?Math.floor(h)+'시간 전':Math.floor(h/24)+'일 전'};
+const inG=it=>S.group==='전체'||it.group===S.group;
+const gName=()=>S.group==='전체'?'':S.group+' 분야 ';
+const months=()=>S.data.meta.forecast?.months||[];
+const ranked=(h,xs)=>xs.filter(it=>fh(it,h)?.score!=null).sort((a,b)=>fh(b,h).score-fh(a,h).score);
 
 async function load(){
   try{
     const t='?v='+Date.now();
     const [d,h]=await Promise.all([fetch('data/latest.json'+t).then(r=>{if(!r.ok)throw 0;return r.json()}),
       fetch('data/history.json'+t).then(r=>r.ok?r.json():null).catch(()=>null)]);
-    S.data=d;S.hist=h;render();
-  }catch(e){$('#upd').textContent='데이터를 불러오지 못했습니다.';}
-}
-
-function filtered(){
-  let xs=S.data.items.slice();
-  if(S.group!=='전체')xs=xs.filter(x=>x.group===S.group);
-  if(S.q){const q=S.q.toLowerCase();xs=xs.filter(x=>(x.name+x.keyword+x.sub).toLowerCase().includes(q))}
-  const c=COLS.find(c=>c.k===S.sort.k);
-  xs.sort((a,b)=>{const va=c.v(a),vb=c.v(b);if(va==null&&vb==null)return 0;if(va==null)return 1;if(vb==null)return -1;
-    return (typeof va==='string'?va.localeCompare(vb,'ko'):va-vb)*S.sort.d});
-  return xs;
+    S.data=d;S.hist=h;
+    const g=decodeURIComponent(location.hash.slice(1));
+    if(GROUPS.includes(g))S.group=g;
+    render();buildHero();setGroup(S.group,{noScroll:1,init:1});
+  }catch(e){$('#upd').textContent='데이터를 불러오지 못했습니다.';console.error(e)}
 }
 
 function render(){
   const {meta,items}=S.data;
-  $('#upd').innerHTML=`마지막 업데이트 <b>${fmtDate(meta.updated_at)}</b><br>다음 자동 업데이트 예정 ${fmtDate(meta.next_update)}`;
-  $('#banner').innerHTML=meta.sample?`<div class="banner"><strong>샘플 데이터 화면입니다.</strong> 지금 보이는 숫자는 디자인 확인용 가상 데이터예요. API 키를 등록하면 첫 수집 때 실제 네이버·쿠팡 데이터로 자동 교체됩니다.</div>`:
-    (meta.errors?.length?`<div class="banner"><strong>일부 수집 경고 ${meta.errors.length}건</strong> — 이전 데이터를 유지한 항목이 있습니다.</div>`:'')+
-    (!meta.sample&&!meta.sources?.naver_shop&&!items.some(x=>x.naver)?`<div class="banner"><strong>가격 데이터 미연결</strong> — 지금은 NAVER API HUB로 검색 추세·뉴스만 수집 중이에요. 가격·상품 수는 네이버 개발자센터 쇼핑 검색 키를 등록하면 표시됩니다.</div>`:'');
-  renderKpis();renderGroups();renderToolbar();renderTable();renderNews();renderInsight();
+  $('#upd').innerHTML=`최종 갱신 <b>${fmtDate(meta.updated_at)}</b><span class="nx"> · 다음 갱신 ${fmtDate(meta.next_update)}</span>`;
+  let n='';
+  if(meta.sample)n+=`<div class="notice"><strong>샘플 데이터 화면입니다.</strong> 지금 보이는 숫자는 디자인 확인용 가상 데이터예요.</div>`;
+  else if(!meta.sources?.naver_shop&&!items.some(x=>x.naver))n+=`<div class="notice"><strong>가격 데이터 미연결</strong> — 현재는 NAVER API HUB로 검색 추세·뉴스·AI 예측을 제공합니다. 가격·상품 수는 네이버 개발자센터 쇼핑 검색 키를 등록하면 표시됩니다.</div>`;
+  if(meta.errors?.length)n+=`<div class="notice"><strong>일부 수집 경고 ${meta.errors.length}건</strong> — 이전 데이터를 유지한 항목이 있습니다.</div>`;
+  $('#notices').innerHTML=n;
+  $$('.qm').forEach(el=>{const m=months()[el.dataset.h-1];if(m)el.textContent=`${el.dataset.h}개월 후 (${mLabel(m)})`});
 }
 
-function renderKpis(){
-  const xs=S.data.items, src=S.data.meta.sources||{};
-  const top=xs.filter(x=>x.score!=null).sort((a,b)=>b.score-a.score)[0];
+/* ---------------- 배너 ---------------- */
+function slideData(g){
+  const xs=S.data.items.filter(it=>g==='전체'||it.group===g), m=months();
+  const r1=ranked(1,xs)[0], top=xs.filter(x=>x.score!=null).sort((a,b)=>b.score-a.score)[0];
   const rise=xs.filter(x=>x.trend?.growth!=null).sort((a,b)=>b.trend.growth-a.trend.growth)[0];
-  const opp=xs.filter(x=>x.competition&&x.score!=null).sort((a,b)=>(b.score/(1+b.competition.ratio))-(a.score/(1+a.competition.ratio)))[0];
-  const on=Object.values(src).filter(Boolean).length;
+  const ag=avg(xs.map(x=>x.trend?.growth));
+  if(g==='전체'){
+    return {h:`안전·소방·보건·환경 용품 시장을 <br><em>한눈에 보고, 미리 준비</em>하세요`,
+      d:`${xs.length}개 핵심 품목의 검색 관심도와 뉴스를 3일마다 자동 수집하고, AI 수요 예측으로 ${m[0]?mLabel(m[0])+'~'+mLabel(m[2]):'다음 3개월'} 유망 품목을 추천합니다.`,
+      s:[['추적 품목',xs.length+'개'],[`${m[0]?mLabel(m[0]):'다음 달'} 추천 1위`,r1?r1.name:'수집 후 표시'],['최근 급상승',rise?`${rise.name} ${pc(rise.trend.growth,0)}`:'–']]};
+  }
+  const x1=r1&&fh(r1,1);
+  return {h:r1?`${mLabel(m[0])} ${g} 분야 유망 품목 <br><em>${esc(r1.name)}</em>`:`${g} 분야 시장 현황`,
+    d:x1?esc(x1.reasons.slice(0,2).join(' · ')):`${g} 분야 ${xs.length}개 품목의 수요 흐름을 확인하세요.`,
+    s:[['분야 품목',xs.length+'개'],['평균 4주 추세',ag==null?'–':pc(ag)],['현재 관심 1위',top?top.name:'–']]};
+}
+function buildHero(){
+  $('#slides').innerHTML=KEYS.map((g,i)=>{const H=HERO[g],D=slideData(g);
+    return `<div class="slide" data-i="${i}" role="group" aria-roledescription="slide" aria-label="${i+1} / ${KEYS.length}: ${g}">
+      <div class="bgx" style="--hb:${H.bg}"></div><div class="art" aria-hidden="true">${ART[H.icon]}</div>
+      <div class="wrap in"><span class="eyebrow">${H.eb}${g==='전체'?'':' · '+H.sub}</span><h2>${D.h}</h2><p class="d">${D.d}</p>
+        <div class="hstats">${D.s.map(([l,v])=>`<div class="hstat"><div class="l">${l}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>
+        <div class="hcta"><a class="btn w" href="#ai" data-goto="${g}">AI 추천 보기 →</a><a class="btn o" href="#status" data-goto="${g}">${g==='전체'?'시장 현황':g+' 분야 현황'}</a></div></div></div>`}).join('');
+  $('#htabs').innerHTML=KEYS.map((g,i)=>`<button type="button" class="htab" role="tab" data-i="${i}">${g==='전체'?'종합':g}<small>${HERO[g].sub}</small></button>`).join('');
+  $$('.htab').forEach(b=>b.onclick=()=>setGroup(KEYS[+b.dataset.i],{noScroll:1}));
+  $$('[data-goto]').forEach(a=>a.addEventListener('click',()=>setGroup(a.dataset.goto,{noScroll:1})));
+  $('#hPrev').onclick=()=>go(S.slide-1,true);$('#hNext').onclick=()=>go(S.slide+1,true);
+  $('#hPlay').onclick=()=>setPaused(!S.paused);
+  go(S.slide);tick();
+}
+function setPaused(p){S.paused=p;S.t0=performance.now();$('#hPlay').textContent=p?'▶︎':'❚❚';$('#hPlay').setAttribute('aria-label',p?'자동 넘김 시작':'자동 넘김 정지')}
+function go(i,user){
+  const n=KEYS.length;S.slide=(i+n)%n;S.t0=performance.now();
+  $$('.slide').forEach(s=>s.classList.toggle('on',+s.dataset.i===S.slide));
+  $$('.htab').forEach(b=>{const on=+b.dataset.i===S.slide;b.classList.toggle('on',on);b.classList.remove('run');b.setAttribute('aria-selected',on)});
+  $('#hCnt').textContent=`${S.slide+1} / ${n}`;
+  if(user&&!S.paused)setPaused(true);
+}
+function tick(){
+  cancelAnimationFrame(S.raf);
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){setPaused(true);return}
+  const DUR=7000,step=t=>{const on=$('.htab.on');
+    if(!S.paused&&!document.hidden){const p=Math.min(1,(t-S.t0)/DUR);if(on){on.classList.add('run');on.style.setProperty('--p',(p*100)+'%')}if(p>=1)go(S.slide+1)}
+    else if(on)on.classList.remove('run');
+    S.raf=requestAnimationFrame(step)};
+  S.raf=requestAnimationFrame(step);
+}
+
+/* ---------------- 테마(분야) 전환 ---------------- */
+function setGroup(g,o={}){
+  S.group=g;
+  if(g==='전체')delete document.documentElement.dataset.group;else document.documentElement.dataset.group=g;
+  $$('.gnb a[data-go]').forEach(a=>a.classList.toggle('on',a.dataset.go===g));
+  if(!o.init)history.replaceState(null,'',g==='전체'?location.pathname:'#'+encodeURIComponent(g));
+  if($('.slide')&&!(o.init&&g==='전체'))go(KEYS.indexOf(g),!o.init);
+  const p=gName();
+  $('#stTitle').textContent=p?p+'시장 현황':'현재 시장 현황';
+  $('#aiTitle').textContent=p+'AI 수요 예측 추천';
+  $('#rkTitle').textContent=p+'품목 순위';
+  $('#nwTitle').textContent=p+'최근 업계 뉴스';
+  renderStatus();renderAI();renderToolbar();renderTable();renderNews();renderInsight();
+  if(S.sel&&!S.data.items.find(x=>x.id===S.sel&&inG(x))){$('#detail').style.display='none';S.sel=null}
+  if(!o.noScroll)$('#status').scrollIntoView();
+}
+
+/* ---------------- 현재 시장 현황 ---------------- */
+function renderStatus(){
+  const xs=S.data.items.filter(inG), bm=S.data.meta.forecast?.base_month, cm=bm?parseInt(bm.slice(5)):new Date().getMonth()+1;
+  const ag=avg(xs.map(x=>x.trend?.growth));
+  const top=xs.filter(x=>x.score!=null).sort((a,b)=>b.score-a.score).slice(0,3);
+  const rise=xs.filter(x=>(x.trend?.growth??-1)>0).sort((a,b)=>b.trend.growth-a.trend.growth).slice(0,3);
+  const fall=xs.filter(x=>(x.trend?.growth??1)<0).sort((a,b)=>a.trend.growth-b.trend.growth).slice(0,3);
+  const peak=xs.filter(x=>x.forecast&&(+x.forecast.si[cm]||0)>=1.12).sort((a,b)=>b.forecast.si[cm]-a.forecast.si[cm]).slice(0,4);
+  const buzz=xs.filter(x=>x.buzz).sort((a,b)=>b.buzz-a.buzz).slice(0,3);
+  const tone=ag==null?'수집 대기':ag>=5?'관심도 상승세':ag<=-5?'관심도 하락세':'관심도 보합세';
+  const none='<span class="na">해당 없음</span>';
+  $('#briefMain').innerHTML=`<h3>${cm}월 ${S.group==='전체'?'전체':S.group+' 분야'} 시장 브리핑</h3>
+    <div class="big">${S.group==='전체'?'전체 시장은':S.group+' 분야는'} 최근 4주 <span class="${(ag??0)>=0?'up':'dn'}">${tone}</span>${ag==null?'':` (평균 ${pc(ag)})`}입니다.</div>
+    <ul class="blist">
+      <li><span class="k">관심 상위</span><span>${top.length?top.map(x=>`<b>${esc(x.name)}</b> ${x.score}점`).join(' · '):none}</span></li>
+      <li><span class="k">급상승</span><span>${rise.length?rise.map(x=>`<b>${esc(x.name)}</b> <span class="up">${pc(x.trend.growth,0)}</span>`).join(' · '):none}</span></li>
+      <li><span class="k">하락</span><span>${fall.length?fall.map(x=>`<b>${esc(x.name)}</b> <span class="dn">${pc(x.trend.growth,0)}</span>`).join(' · '):none}</span></li>
+      <li><span class="k">${cm}월 성수기</span><span>${peak.length?peak.map(x=>`<b>${esc(x.name)}</b>`).join(', '):(xs.some(x=>x.forecast)?none:'<span class="na">월간 데이터 수집 후 표시</span>')}</span></li>
+      <li><span class="k">뉴스 화제</span><span>${buzz.length?buzz.map(x=>`<b>${esc(x.name)}</b> 주간 ${x.buzz}건`).join(' · '):'<span class="na">–</span>'}</span></li>
+    </ul>`;
+  const r1=ranked(1,xs)[0], mm=months(), up=xs.filter(x=>(x.trend?.growth??0)>0).length;
   $('#kpis').innerHTML=[
-    ['추적 품목',xs.length+'개',`${GROUPS.length}개 분야 · 데이터 소스 ${on}/${Object.keys(src).length||4} 연결`],
-    ['인기 1위',top?top.name:'–',top?`인기점수 ${top.score}`+(top.naver?.avg?` · 평균 ${Math.round(top.naver.avg).toLocaleString()}원`:''):''],
-    ['최근 급상승',rise?rise.name:'–',rise?`최근 4주 관심도 ${rise.trend.growth>=0?'+':''}${rise.trend.growth}%`:''],
-    ['진입 기회 후보',opp?opp.name:'–',opp?`인기 대비 경쟁 낮음 (경쟁강도 ${opp.competition.level})`:'검색광고 API 연결 시 표시'],
-  ].map(([l,v,s])=>`<div class="card kpi"><div class="l">${l}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`).join('');
-}
-
-function renderGroups(){
+    ['추적 품목',xs.length+'개',`${S.group==='전체'?'4개 분야':S.group+' 분야'} · 3일마다 갱신`],
+    ['관심도 상승 품목',`${up}개`,`${xs.length}개 중 최근 4주 상승`],
+    ['현재 관심 1위',top[0]?.name||'–',top[0]?`인기점수 ${top[0].score}`:''],
+    [`${mm[0]?mLabel(mm[0]):'다음 달'} AI 추천 1위`,r1?.name||'–',r1?`예상 수요 ${pc(fh(r1,1).change,0)}`:'다음 수집 후 표시'],
+  ].map(([l,v,s])=>`<div class="card kpi"><div class="l">${l}</div><div class="v" title="${esc(v)}">${esc(v)}</div><div class="s">${esc(s)}</div></div>`).join('');
   $('#groups').innerHTML=GROUPS.map(g=>{
-    const xs=S.data.items.filter(x=>x.group===g);
-    const sc=xs.filter(x=>x.score!=null);
-    const best=sc.sort((a,b)=>b.score-a.score)[0];
-    const avgScore=sc.length?Math.round(sc.reduce((s,x)=>s+x.score,0)/sc.length):null;
-    const vol=xs.reduce((s,x)=>s+(x.search?.total||0),0);
-    return `<div class="card grp ${S.group===g?'on':''}" style="--gc:var(--g-${g})" data-g="${g}">
-      <div class="t"><span>${g}</span><span class="sub">${xs.length}개 품목</span></div>
-      <div class="row"><span>평균 인기점수</span><b>${avgScore??'–'}</b></div>
-      <div class="row"><span>월 검색량 합계</span><b>${vol?vol.toLocaleString():'–'}</b></div>
-      <div class="row"><span>분야 1위</span><b>${best?esc(best.name):'–'}</b></div></div>`}).join('');
-  document.querySelectorAll('.grp').forEach(el=>el.onclick=()=>{S.group=S.group===el.dataset.g?'전체':el.dataset.g;renderGroups();renderToolbar();renderTable()});
+    const gx=S.data.items.filter(x=>x.group===g), sc=gx.filter(x=>x.score!=null).sort((a,b)=>b.score-a.score);
+    const gg=avg(gx.map(x=>x.trend?.growth)), r=ranked(1,gx)[0];
+    return `<button type="button" class="card grp ${S.group===g?'on':''}" style="--gc:var(--g-${g})" data-g="${g}" aria-pressed="${S.group===g}">
+      <div class="t"><span>${g}</span><span class="tag">${gx.length}개 품목</span></div>
+      <div class="row"><span>평균 4주 추세</span><b>${arrow(gg)}</b></div>
+      <div class="row"><span>관심 1위</span><b>${sc[0]?esc(sc[0].name):'–'}</b></div>
+      <div class="row"><span>${mm[0]?mLabel(mm[0]):'다음 달'} 추천</span><b>${r?esc(r.name):'–'}</b></div>
+      <div class="st">${gg==null?'데이터 수집 대기':gg>=5?'📈 수요 상승 국면':gg<=-5?'📉 수요 둔화 국면':'➖ 수요 보합'}</div></button>`}).join('');
+  $$('.grp').forEach(el=>el.onclick=()=>setGroup(S.group===el.dataset.g?'전체':el.dataset.g,{noScroll:1}));
 }
 
+/* ---------------- AI 추천 ---------------- */
+function seasonSvg(si,target){
+  if(!si)return'';const v=Array.from({length:12},(_,i)=>+si[i+1]||0),mx=Math.max(...v,1.2);
+  return `<svg viewBox="0 0 120 30" preserveAspectRatio="none" aria-hidden="true">${v.map((x,i)=>{const h=Math.max(2,x/mx*28);
+    return `<rect x="${i*10+1}" y="${30-h}" width="8" height="${h}" rx="1.5" fill="${i+1===target?'var(--gc)':'color-mix(in srgb,var(--gc) 25%,transparent)'}"/>`}).join('')}</svg>`;
+}
+function renderAI(){
+  const mm=months(), xs=S.data.items.filter(inG);
+  $('#hz').innerHTML=[1,2,3].map(h=>`<button type="button" role="tab" class="${S.h===h?'on':''}" data-h="${h}" aria-selected="${S.h===h}">${h}개월 후<small>${mm[h-1]?mm[h-1].slice(0,4)+'년 '+mLabel(mm[h-1]):''}</small></button>`).join('');
+  $$('#hz button').forEach(b=>b.onclick=()=>{S.h=+b.dataset.h;renderAI()});
+  const rs=ranked(S.h,xs);
+  if(!rs.length){
+    $('#recs').innerHTML=`<div class="card empty">AI 수요 예측은 최근 3년 월간 데이터가 수집된 뒤 표시됩니다. 다음 자동 수집(또는 Actions에서 수동 실행) 후 확인하세요.</div>`;
+    $('#rtable').style.display='none';$('#aiNote').textContent='';return;
+  }
+  const tm=parseInt(mm[S.h-1]?.slice(5)||0);
+  $('#recs').innerHTML=rs.slice(0,6).map((it,i)=>{const x=fh(it,S.h);
+    return `<article class="card rec" style="--gc:var(--g-${it.group})" data-id="${it.id}" tabindex="0" aria-label="${i+1}위 ${esc(it.name)}">
+      <span class="rk">${String(i+1).padStart(2,'0')}</span>
+      <div><span class="tag">${it.group}</span> <span class="meta">${esc(it.sub)}</span></div>
+      <div class="nm">${esc(it.name)}</div>
+      <div class="nums"><div>추천 점수<b>${x.score}</b></div><div>예상 수요<b class="${x.change>=0?'up':'dn'}">${pc(x.change,0)}</b></div><div style="margin-left:auto;text-align:right">신뢰도<br><span class="conf ${x.conf}">${x.conf}</span></div></div>
+      <div class="sbar"><i style="width:${x.score}%"></i></div>
+      <ul>${x.reasons.slice(0,3).map(r=>`<li>${esc(r)}</li>`).join('')}</ul>
+      <div class="season">${seasonSvg(it.forecast.si,tm)}<span>월별 계절 패턴<br>성수기 ${it.forecast.peak}월</span></div>
+    </article>`}).join('');
+  $$('.rec').forEach(el=>{el.onclick=()=>openDetail(el.dataset.id);el.onkeydown=e=>{if(e.key==='Enter')openDetail(el.dataset.id)}});
+  const rest=rs.slice(6,15);
+  $('#rtable').style.display=rest.length?'block':'none';
+  $('#rtable').innerHTML=`<table><thead><tr><th>#</th><th class="l">품목</th><th>추천 점수</th><th>예상 수요 변화</th><th>신뢰도</th><th class="l">주요 근거</th></tr></thead><tbody>${rest.map((it,i)=>{const x=fh(it,S.h);
+    return `<tr data-id="${it.id}"><td>${i+7}</td><td class="l"><span class="nm2">${esc(it.name)}</span><span class="tag" style="--gc:var(--g-${it.group})">${it.group}</span></td><td><b>${x.score}</b></td><td>${arrow(x.change)}</td><td><span class="conf ${x.conf}">${x.conf}</span></td><td class="l" style="color:var(--muted);font-size:13px">${esc(x.reasons[0])}</td></tr>`}).join('')}</tbody></table>`;
+  $$('#rtable tbody tr').forEach(tr=>tr.onclick=()=>openDetail(tr.dataset.id));
+  $('#aiNote').innerHTML=`분석 모델: ${esc(S.data.meta.forecast?.model||'')} · 기준월 ${mLabel(S.data.meta.forecast?.base_month)} · 예측은 과거 패턴 기반 참고 자료입니다.`;
+}
+
+/* ---------------- 품목 표 ---------------- */
 function renderToolbar(){
-  $('#toolbar').innerHTML=['전체',...GROUPS].map(g=>`<button class="chip ${S.group===g?'on':''}" data-g="${g}">${g}</button>`).join('')+
-    `<input class="search" id="q" placeholder="품목 검색 (예: 소화기)" value="${esc(S.q)}">`;
-  document.querySelectorAll('.chip').forEach(el=>el.onclick=()=>{S.group=el.dataset.g;renderGroups();renderToolbar();renderTable()});
+  $('#toolbar').innerHTML=KEYS.map(g=>`<button type="button" class="chip ${S.group===g?'on':''}" data-g="${g}">${g}</button>`).join('')+
+    `<input class="search" id="q" placeholder="품목 검색 (예: 소화기)" aria-label="품목 검색" value="${esc(S.q)}">`;
+  $$('.chip').forEach(el=>el.onclick=()=>setGroup(el.dataset.g,{noScroll:1}));
   $('#q').oninput=e=>{S.q=e.target.value;renderTable()};
 }
-
+function filtered(){
+  let xs=S.data.items.filter(inG);
+  if(S.q){const q=S.q.toLowerCase();xs=xs.filter(x=>(x.name+x.keyword+x.sub).toLowerCase().includes(q))}
+  const c=COLS.find(c=>c.k===S.sort.k);
+  return xs.sort((a,b)=>{const va=c.v(a),vb=c.v(b);if(va==null&&vb==null)return 0;if(va==null)return 1;if(vb==null)return -1;
+    return (typeof va==='string'?va.localeCompare(vb,'ko'):va-vb)*S.sort.d});
+}
 function renderTable(){
-  $('#thead').innerHTML='<tr>'+COLS.map(c=>`<th class="${c.l?'l':''}" data-k="${c.k}">${c.t}${S.sort.k===c.k?`<span class="ar">${S.sort.d<0?'▼':'▲'}</span>`:''}</th>`).join('')+'</tr>';
-  document.querySelectorAll('th').forEach(th=>{const c=COLS.find(c=>c.k===th.dataset.k);if(c.nosort)return;
+  const it0=S.data.items, has=k=>it0.some(x=>x[k]);
+  const cols=COLS.filter(c=>!(['navg','nmin','comp'].includes(c.k)&&!has('naver'))&&!(c.k==='cavg'&&!has('coupang'))&&!(c.k==='vol'&&!has('search'))&&!(['f1','f3','peak'].includes(c.k)&&!has('forecast'))&&!(c.k==='buzz'&&!it0.some(x=>x.buzz!=null)));
+  $('#thead').innerHTML='<tr>'+cols.map(c=>`<th class="${c.l?'l':''}" data-k="${c.k}">${c.t}${S.sort.k===c.k?`<span class="ar">${S.sort.d<0?'▼':'▲'}</span>`:''}</th>`).join('')+'</tr>';
+  $$('#thead th').forEach(th=>{const c=COLS.find(c=>c.k===th.dataset.k);if(c.nosort)return;
     th.onclick=()=>{S.sort={k:c.k,d:S.sort.k===c.k?-S.sort.d:(c.l?1:-1)};renderTable()}});
   const xs=filtered();
-  $('#tbody').innerHTML=xs.map((it,i)=>`<tr data-id="${it.id}" class="${S.sel===it.id?'sel':''}">`+COLS.map(c=>`<td class="${c.l?'l':''}">${c.h?c.h(it,i):c.v(it,i)}</td>`).join('')+'</tr>').join('')||
-    `<tr><td colspan="${COLS.length}" class="na" style="text-align:center;padding:30px">검색 결과가 없습니다</td></tr>`;
-  document.querySelectorAll('tbody tr[data-id]').forEach(tr=>tr.onclick=()=>openDetail(tr.dataset.id));
+  $('#tbody').innerHTML=xs.map((it,i)=>`<tr data-id="${it.id}" class="${S.sel===it.id?'sel':''}">`+cols.map(c=>`<td class="${c.l?'l':''}">${c.h?c.h(it,i):c.v(it,i)}</td>`).join('')+'</tr>').join('')||
+    `<tr><td colspan="${cols.length}" class="na" style="text-align:center;padding:30px">검색 결과가 없습니다</td></tr>`;
+  $$('#tbody tr[data-id]').forEach(tr=>tr.onclick=()=>openDetail(tr.dataset.id));
 }
 
-function renderNews(){
-  const all=S.data.items.flatMap(it=>(it.news||[]).map(n=>({...n,item:it.name})));
-  const seen=new Set(),xs=all.filter(n=>!seen.has(n.link)&&seen.add(n.link)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,8);
-  $('#newsSec').style.display=xs.length?'block':'none';
-  if(xs.length)$('#newsAll').innerHTML=nlist(xs,true);
-}
-
-function renderInsight(){
-  const ins=S.data.meta.shop_insight;
-  S.gcharts.forEach(c=>c.destroy());S.gcharts=[];
-  $('#insight').style.display=ins?.length?'block':'none';
-  if(!ins?.length||typeof Chart==='undefined')return;
-  const cols=['--g-안전','--g-소방','--g-보건','--g-환경','--accent','--muted'].map(css);
-  S.gcharts.push(new Chart($('#cInsight'),{type:'line',data:{labels:ins[0].series.map(s=>s.p.slice(5)),
-    datasets:ins.map((g,i)=>({label:g.name+(g.growth!=null?` (${g.growth>=0?'+':''}${g.growth}%)`:''),data:g.series.map(s=>s.r),borderColor:cols[i%cols.length],backgroundColor:cols[i%cols.length],tension:.3,pointRadius:0,borderWidth:2}))},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10}}},
-      scales:{x:{grid:{display:false},ticks:{maxTicksLimit:7}},y:{grid:{color:css('--line')},beginAtZero:true}}}}));
-}
-
+/* ---------------- 상세 ---------------- */
 function plist(arr,coupang){
   if(!arr?.length)return '<p class="na">데이터 없음</p>';
   return '<ul class="plist">'+arr.map(p=>`<li><span style="min-width:0;overflow:hidden"><a href="${esc(p.link)||'#'}" target="_blank" rel="noopener">${esc(p.title)}</a>
     <div class="ml">${coupang?(p.rocket?'🚀 로켓배송':'일반배송'):esc(p.mall)}</div></span><span class="pr">${won(p.price)}</span></li>`).join('')+'</ul>';
 }
-
+function nlist(arr,withName){
+  if(!arr?.length)return '<p class="na">뉴스 없음</p>';
+  return '<ul class="plist">'+arr.map(n=>`<li><span style="min-width:0;overflow:hidden"><a href="${esc(n.link)||'#'}" target="_blank" rel="noopener">${esc(n.title)}</a>
+    <div class="ml">${withName?`<b>${esc(n.item)}</b> · `:''}${esc(n.desc||'')}</div></span><span class="pr" style="font-weight:400;color:var(--muted)">${ago(n.date)}</span></li>`).join('')+'</ul>';
+}
 function openDetail(id){
+  const it=S.data.items.find(x=>x.id===id);if(!it)return;
+  if(!inG(it))setGroup('전체',{noScroll:1});
   S.sel=id;renderTable();
-  const it=S.data.items.find(x=>x.id===id), n=it.naver||{}, c=it.coupang, h=S.hist?.items?.[id];
+  const n=it.naver, c=it.coupang, h=S.hist?.items?.[id], f=it.forecast;
   const el=$('#detail');el.style.display='block';
   el.innerHTML=`<div class="dhead"><div><h3>${esc(it.name)} <span class="tag" style="--gc:var(--g-${it.group})">${it.group} · ${esc(it.sub)}</span></h3>
-      <div class="sub">검색어 "${esc(it.keyword)}" · 인기점수 ${it.score??'–'} · 경쟁강도 ${it.competition?it.competition.level+' ('+it.competition.ratio+')':'–'}</div></div>
-      <button class="close" id="close">닫기 ✕</button></div>
+      <div class="na" style="font-size:13.5px">검색어 "${esc(it.keyword)}" · 인기점수 ${it.score??'–'} · 4주 추세 ${pc(it.trend?.growth)}${f?` · 성수기 ${f.peak}월 · 비수기 ${f.low}월`:''}</div></div>
+      <button type="button" class="close" id="close">닫기 ✕</button></div>
     <div class="dgrid">
-      <div class="box"><h4>네이버 가격 통계 (분석 상품 ${n.n??0}개)</h4><div class="stats">
+      <div class="box full"><h4>최근 3년 월별 검색 관심도와 AI 예측 (점선: 예측)</h4><div class="chartbox" style="height:260px"><canvas id="cMonthly"></canvas></div></div>
+      ${f?`<div class="box full"><h4>AI 수요 예측 요약</h4><div class="stats">${f.h.map(x=>`<div>${x.h}개월 후 (${mLabel(x.month)})<b class="${x.change>=0?'up':'dn'}">${pc(x.change,0)}</b><span class="conf ${x.conf}">신뢰도 ${x.conf}</span> · 점수 ${x.score}</div>`).join('')}</div>
+        <p class="note" style="margin:10px 0 0">${f.h.map(x=>`<b>${mLabel(x.month)}</b>: ${esc(x.reasons.join(', '))}`).join('<br>')}</p></div>`:''}
+      <div class="box"><h4>최근 6개월 주간 관심도 (기준 "${esc(S.data.meta.anchor)}" 평균=100)</h4><div class="chartbox"><canvas id="cTrend"></canvas></div></div>
+      <div class="box"><h4>관련 최신 뉴스 · 최근 1주 ${it.buzz??'–'}건</h4>${nlist(it.news)}</div>
+      ${n?`<div class="box"><h4>네이버 가격 통계 (분석 상품 ${n.n??0}개)</h4><div class="stats">
         <div>최저가<b>${won(n.min)}</b></div><div>하위10%<b>${won(n.p10)}</b></div><div>중앙값<b>${won(n.median)}</b></div>
         <div>평균가<b>${won(n.avg)}</b></div><div>상위10%<b>${won(n.p90)}</b></div><div>최고가<b>${won(n.max)}</b></div>
         <div>등록 상품<b>${num(n.total)}</b></div><div>판매처 수<b>${num(n.sellers)}</b></div><div>월 검색량<b>${num(it.search?.total)}</b></div></div></div>
-      <div class="box"><h4>쿠팡 가격 통계 ${c?`(상위 ${c.n}개)`:''}</h4>${c?`<div class="stats">
-        <div>최저가<b>${won(c.min)}</b></div><div>중앙값<b>${won(c.median)}</b></div><div>평균가<b>${won(c.avg)}</b></div>
-        <div>최고가<b>${won(c.max)}</b></div><div>로켓배송 비율<b>${c.rocket}%</b></div><div>네이버 대비<b>${n.avg?((c.avg/n.avg-1)*100>=0?'+':'')+((c.avg/n.avg-1)*100).toFixed(0)+'%':'–'}</b></div></div>
-        <div class="sub" style="margin-top:8px">쿠팡 갱신: ${fmtDate(c.updated_at)}</div>`:'<p class="na">아직 수집되지 않았습니다 (쿠팡 키 등록 후 순환 수집)</p>'}</div>
       <div class="box"><h4>가격대 분포 (네이버, 이상치 제외)</h4><div class="chartbox"><canvas id="cHist"></canvas></div></div>
-      <div class="box"><h4>6개월 검색 관심도 추이 (기준 "${esc(S.data.meta.anchor)}" 평균=100)</h4><div class="chartbox"><canvas id="cTrend"></canvas></div></div>
-      ${h&&S.hist.dates.length>1?`<div class="box full"><h4>수집 회차별 가격 변화</h4><div class="chartbox"><canvas id="cHist2"></canvas></div></div>`:''}
-      <div class="box"><h4>네이버 상위 상품 (네이버 랭킹순)</h4>${plist(n.top)}</div>
-      <div class="box"><h4>쿠팡 상위 상품</h4>${plist(c?.top,true)}</div>
-      ${it.news?`<div class="box full"><h4>관련 최신 뉴스 (네이버 뉴스 "${esc(it.keyword)}")</h4>${nlist(it.news)}</div>`:''}
+      <div class="box"><h4>네이버 상위 상품</h4>${plist(n.top)}</div>`:''}
+      ${c?`<div class="box"><h4>쿠팡 상위 상품 (평균 ${won(c.avg)}, 로켓 ${c.rocket}%)</h4>${plist(c.top,true)}</div>`:''}
+      ${h&&S.hist.dates.length>1&&n?`<div class="box full"><h4>수집 회차별 가격 변화</h4><div class="chartbox"><canvas id="cHist2"></canvas></div></div>`:''}
       <div class="box full note"><h4>소싱 메모</h4>
         <p><b>인증·법규</b> — ${esc(it.cert)}</p><p><b>시장 메모</b> — ${esc(it.memo)}</p>
-        ${n.categories?.length?`<p><b>네이버 주요 분류</b> — ${n.categories.map(x=>esc(x.path)+' ('+x.share+'%)').join(', ')}</p>`:''}</div>
+        ${n?.categories?.length?`<p><b>네이버 주요 분류</b> — ${n.categories.map(x=>esc(x.path)+' ('+x.share+'%)').join(', ')}</p>`:''}</div>
     </div>`;
   $('#close').onclick=()=>{el.style.display='none';S.sel=null;renderTable()};
   drawCharts(it,h);
   el.scrollIntoView({behavior:'smooth',block:'start'});
 }
-
 function drawCharts(it,h){
   S.charts.forEach(c=>c.destroy());S.charts=[];
   if(typeof Chart==='undefined')return;
-  const acc=css('--accent'),mut=css('--muted'),line=css('--line'),blue=css('--g-안전');
+  const gc=css('--g-'+it.group),mut=css('--muted'),line=css('--line');
   Chart.defaults.font.family='Pretendard, sans-serif';Chart.defaults.color=mut;
   const grid={color:line},base={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}};
-  const hs=it.naver?.hist;
-  if(hs){const labels=hs.counts.map((_,i)=>`${Math.round(hs.edges[i]/1000).toLocaleString()}~${Math.round(hs.edges[i+1]/1000).toLocaleString()}천`);
-    S.charts.push(new Chart($('#cHist'),{type:'bar',data:{labels,datasets:[{data:hs.counts,backgroundColor:acc,borderRadius:4}]},
-      options:{...base,scales:{x:{grid:{display:false},ticks:{maxRotation:45,font:{size:10}}},y:{grid,title:{display:true,text:'상품 수'}}},
-      plugins:{legend:{display:false},tooltip:{callbacks:{title:t=>`${hs.edges[t[0].dataIndex].toLocaleString()}원 ~ ${hs.edges[t[0].dataIndex+1].toLocaleString()}원`}}}}}));}
+  const mo=it.monthly, f=it.forecast;
+  if(mo?.length){
+    const labels=[...mo.map(x=>x.p),...(f?f.h.map(x=>x.month):[])];
+    const act=[...mo.map(x=>x.r),...(f?f.h.map(()=>null):[])];
+    const fc=f?[...mo.map((x,i)=>i===mo.length-1?x.r:null),...f.h.map(x=>x.value)]:[];
+    S.charts.push(new Chart($('#cMonthly'),{type:'line',data:{labels:labels.map(l=>l.slice(2).replace('-','.')),datasets:[
+      {label:'실제 관심도',data:act,borderColor:gc,backgroundColor:gc+'22',fill:true,tension:.3,pointRadius:0,borderWidth:2},
+      {label:'AI 예측',data:fc,borderColor:gc,borderDash:[6,5],pointRadius:4,pointBackgroundColor:'#fff',borderWidth:2,tension:.3,spanGaps:true}]},
+      options:{...base,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10}}},interaction:{intersect:false,mode:'index'},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:12}},y:{grid,beginAtZero:true}}}}));
+  }else $('#cMonthly').parentElement.innerHTML='<p class="na">월간 데이터 수집 후 표시됩니다.</p>';
   const sr=it.trend?.series;
-  if(sr?.length){S.charts.push(new Chart($('#cTrend'),{type:'line',data:{labels:sr.map(s=>s.p.slice(5)),datasets:[{data:sr.map(s=>s.r),borderColor:blue,backgroundColor:blue+'22',fill:true,tension:.3,pointRadius:0,borderWidth:2}]},
-    options:{...base,interaction:{intersect:false,mode:'index'},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:7}},y:{grid,beginAtZero:true}}}}));}
-  if(h&&S.hist.dates.length>1&&$('#cHist2')){
-    const ds=[['네이버 평균가',h.avg,acc],['네이버 최저가',h.min,mut],['쿠팡 평균가',h.cp_avg,blue]].filter(d=>d[1].some(v=>v!=null))
+  if(sr?.length)S.charts.push(new Chart($('#cTrend'),{type:'line',data:{labels:sr.map(s=>s.p.slice(5)),datasets:[{data:sr.map(s=>s.r),borderColor:gc,backgroundColor:gc+'22',fill:true,tension:.3,pointRadius:0,borderWidth:2}]},
+    options:{...base,interaction:{intersect:false,mode:'index'},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:7}},y:{grid,beginAtZero:true}}}}));
+  const hs=it.naver?.hist;
+  if(hs&&$('#cHist')){const labels=hs.counts.map((_,i)=>`${Math.round(hs.edges[i]/1000).toLocaleString()}~${Math.round(hs.edges[i+1]/1000).toLocaleString()}천`);
+    S.charts.push(new Chart($('#cHist'),{type:'bar',data:{labels,datasets:[{data:hs.counts,backgroundColor:gc,borderRadius:4}]},
+      options:{...base,scales:{x:{grid:{display:false},ticks:{maxRotation:45,font:{size:10}}},y:{grid}}}}))}
+  if(h&&$('#cHist2')){
+    const ds=[['네이버 평균가',h.avg,gc],['네이버 최저가',h.min,mut],['쿠팡 평균가',h.cp_avg,css('--g-전체')]].filter(d=>d[1].some(v=>v!=null))
       .map(([label,data,color])=>({label,data,borderColor:color,backgroundColor:color,tension:.25,pointRadius:3,borderWidth:2,spanGaps:true}));
     S.charts.push(new Chart($('#cHist2'),{type:'line',data:{labels:S.hist.dates.map(d=>d.slice(5)),datasets:ds},
-      options:{...base,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${Math.round(c.raw).toLocaleString()}원`}}},
-      interaction:{intersect:false,mode:'index'},scales:{x:{grid:{display:false}},y:{grid,ticks:{callback:v=>v.toLocaleString()}}}}}));}
+      options:{...base,plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10}}},interaction:{intersect:false,mode:'index'},scales:{x:{grid:{display:false}},y:{grid}}}}))}
 }
 
+/* ---------------- 뉴스·쇼핑인사이트 ---------------- */
+function renderNews(){
+  const all=S.data.items.filter(inG).flatMap(it=>(it.news||[]).map(n=>({...n,item:it.name})));
+  const seen=new Set(),xs=all.filter(n=>!seen.has(n.link)&&seen.add(n.link)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,10);
+  $('#newsSec').style.display=xs.length?'block':'none';
+  if(xs.length){const half=Math.ceil(xs.length/2);$('#newsAll').innerHTML=`<div>${nlist(xs.slice(0,half),true)}</div><div>${nlist(xs.slice(half),true)}</div>`}
+}
+function renderInsight(){
+  const ins=S.data.meta.shop_insight;
+  S.gcharts.forEach(c=>c.destroy());S.gcharts=[];
+  $('#insight').style.display=ins?.length?'block':'none';
+  if(!ins?.length||typeof Chart==='undefined')return;
+  const cols=['--g-안전','--g-소방','--g-보건','--g-환경','--g-전체'].map(css);
+  S.gcharts.push(new Chart($('#cInsight'),{type:'line',data:{labels:ins[0].series.map(s=>s.p.slice(5)),
+    datasets:ins.map((g,i)=>({label:g.name+(g.growth!=null?` (${pc(g.growth)})`:''),data:g.series.map(s=>s.r),borderColor:cols[i%cols.length],backgroundColor:cols[i%cols.length],tension:.3,pointRadius:0,borderWidth:2}))},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10}}},
+      scales:{x:{grid:{display:false},ticks:{maxTicksLimit:7}},y:{grid:{color:css('--line')},beginAtZero:true}}}}));
+}
+
+/* ---------------- 이벤트 ---------------- */
+function closeMenu(){$('#gnb').classList.remove('open');$('#menuBtn').setAttribute('aria-expanded','false')}
+$$('.gnb a[data-go], .brand').forEach(a=>a.onclick=e=>{e.preventDefault();closeMenu();if(!S.data)return;setGroup(a.dataset.go,{noScroll:1});window.scrollTo({top:0,behavior:'smooth'})});
+$$('.gnb a:not([data-go])').forEach(a=>a.addEventListener('click',closeMenu));
+$$('.q[data-h]').forEach(a=>a.addEventListener('click',()=>{S.h=+a.dataset.h;if(S.data)renderAI()}));
+$('#menuBtn').onclick=()=>{const o=$('#gnb').classList.toggle('open');$('#menuBtn').setAttribute('aria-expanded',o)};
 $('#theme').onclick=()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;
-  r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('theme',r.dataset.theme)}catch(e){};renderInsight();if(S.sel)openDetail(S.sel)};
+  r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('theme',r.dataset.theme)}catch(e){};if(S.data){renderInsight();if(S.sel)openDetail(S.sel)}};
 try{const t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
+window.addEventListener('hashchange',()=>{const g=decodeURIComponent(location.hash.slice(1));if(S.data&&GROUPS.includes(g)&&g!==S.group)setGroup(g,{noScroll:1})});
 load();
 </script>
 </body>
